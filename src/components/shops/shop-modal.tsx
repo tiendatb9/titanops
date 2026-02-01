@@ -39,7 +39,7 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
     const router = useRouter()
     const [isLoading, setIsLoading] = useState(false)
     const form = useForm<ShopFormValues>({
-        resolver: zodResolver(shopFormSchema),
+        resolver: zodResolver(shopFormSchema) as any,
         defaultValues: {
             name: "",
             platform: Platform.SHOPEE,
