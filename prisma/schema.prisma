@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- NEXTAUTH (AUTH.JS) MODELS ---
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  accounts      Account[]
+  sessions      Session[]
+  shops         Shop[]
+  products      Product[]
+  tenantConfig  TenantConfig?
+  
+  // Subscription Plan (Billing)
+  plan          String    @default("FREE") // FREE, PRO, BUSINESS
+  planExpires   DateTime?
+  
+  // Auth Credentials
+  password      String?
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// Configuration for Hybrid Architecture (BYOD)
+model TenantConfig {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  
+  // Custom Database Connection
+  useCustomDb    Boolean  @default(false)
+  dbConnection   String?  // Encrypted Postgres Connection String
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// --- E-COMMERCE CORE MODELS ---
+
+enum Platform {
+  SHOPEE
+  TIKTOK
+  LAZADA
+  TIKI
+  SAPO
+  PANCAKE
+  WOO
+  OTHER
+}
+
+model Shop {
+  id             String   @id @default(cuid())
+  userId         String
+  name           String
+  platform       Platform
+  platformShopId String?  // ID của shop trên sàn (vd: shop_id shopee)
+  
+  // Custom App Credentials (BYOA)
+  useCustomApp   Boolean  @default(false)
+  appKey         String?  // Partner ID / App Key
+  appSecret      String?  // Partner Key / App Secret (Encrypted)
+  
+  // Credentials (Token)
+  credentials    Json?    // { access_token, refresh_token, shop_cipher... }
+  
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  listings       Listing[]
+  orders         Order[]
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([platform, platformShopId]) // Một shop trên sàn chỉ link 1 lần (hoặc bỏ nếu cho phép trùng)
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  userId      String
+  
+  name        String
+  description     String?  @db.Text
+  descriptionHtml String?  @db.Text // HTML format for rich text editors
+  images      String[] // Array of URLs
+  
+  // Categorization
+  categoryId  String?
+  brand       String?
+  
+  // Master Status
+  sku         String?  // Master SKU (Optional container)
+  status      String   @default("DRAFT") // ACTIVE, DRAFT, ARCHIVED
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  variants    Variant[]
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Variant {
+  id          String   @id @default(cuid())
+  productId   String
+  
+  name        String   // Tên phân loại (vd: Xanh - L)
+  sku         String   // Master SKU (Quan trọng để map tồn kho)
+  barcode     String?
+  
+  price       Decimal  @default(0)
+  stock       Int      @default(0) // Master Stock (Tồn kho thực tế tại kho nhà)
+  
+  image       String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  listings    Listing[] // Các liên kết của biến thể này trên các sàn
+  
+  @@unique([productId, sku]) // Trong 1 sản phẩm, SKU biến thể không trùng
+}
+
+// Listing = Liên kết giữa Variant (Master) và Sản phẩm trên Sàn
+model Listing {
+  id             String   @id @default(cuid())
+  shopId         String
+  variantId      String?  // Có thể null nếu listing chưa map với Master Item nào
+  
+  platformItemId String   // Item ID trên sàn (vd: Shopee Item ID)
+  platformSkuId  String?  // Model/Variation ID trên sàn
+  platformSku    String?  // SKU trên sàn (để so khớp)
+  
+  syncedPrice    Decimal? // Giá đang để trên sàn
+  syncedStock    Int?     // Tồn kho đang để trên sàn
+  
+  status         String   // ACTIVE, INACTIVE, DELETED
+  syncStatus     String   // SYNCED, ERROR, PENDING
+  lastSyncAt     DateTime?
+  
+  shop           Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  variant        Variant? @relation(fields: [variantId], references: [id])
+  
+  @@index([shopId, platformItemId])
+}
+
+// --- ORDER MANAGEMENT ---
+
+model Order {
+  id              String   @id @default(cuid())
+  shopId          String
+  
+  platformOrderId String   // Mã đơn hàng sàn (vd: 230910ABCXYZ)
+  orderStatus     String   // UNPAID, READY_TO_SHIP, SHIPPED, COMPLETED, CANCELLED
+  
+  totalAmount     Decimal
+  customerName    String?
+  shippingAddress String?  @db.Text
+  
+  items           OrderItem[]
+  
+  createdAt       DateTime @default(now()) // Thời điểm tạo đơn trên hệ thống
+  orderDate       DateTime // Thời điểm khách đặt trên sàn
+  updatedAt       DateTime @updatedAt
+  
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, platformOrderId])
+}
+
+model OrderItem {
+  id              String   @id @default(cuid())
+  orderId         String
+  
+  listingId       String?  // Link tới listing nếu tìm thấy
+  productName     String
+  sku             String?  // SKU trên đơn
+  quantity        Int
+  price           Decimal
+  
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
