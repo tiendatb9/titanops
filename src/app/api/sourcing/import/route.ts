@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { auth } from "@/lib/auth"
 
-// Initialize Prisma Client (Singleton pattern is recommended helper in lib, but for now direct init)
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/prisma"
 
 export async function POST(request: Request) {
     try {
