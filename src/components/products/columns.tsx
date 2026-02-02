@@ -3,6 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { MoreHorizontal, ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -172,7 +173,9 @@ export const columns: ColumnDef<Product>[] = [
                             Sao chép ID
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>Chỉnh sửa</DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                            <Link href={`/products/builder/${payment.id}`}>Chỉnh sửa</Link>
+                        </DropdownMenuItem>
                         <DropdownMenuItem>Đăng lên sàn</DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600">Xóa</DropdownMenuItem>
                     </DropdownMenuContent>
