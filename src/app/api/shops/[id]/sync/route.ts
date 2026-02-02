@@ -58,6 +58,19 @@ export async function POST(
         for (const item of productDetails) {
             const platformItemId = String(item.item_id)
 
+            // Parse Description (Handle Extended Type)
+            let description = item.description
+            if (item.description_type === 'extended' && item.description_info?.extended_description?.field_list) {
+                const fields = item.description_info.extended_description.field_list
+                const fieldTexts = fields
+                    .filter((f: any) => f.field_type === 'text' && f.text)
+                    .map((f: any) => f.text)
+
+                if (fieldTexts.length > 0) {
+                    description = fieldTexts.join('\n\n')
+                }
+            }
+
             // Check if Listing exists first
             const existingListing = await prisma.listing.findFirst({
                 where: {
@@ -98,7 +111,7 @@ export async function POST(
                     data: {
                         userId: session.user.id,
                         name: item.item_name,
-                        description: item.description,
+                        description: description, // Use parsed description
                         images: item.image?.image_url_list || [],
                         sku: item.item_sku || `SHOPEE-${item.item_id}`,
                         status: 'ACTIVE',
