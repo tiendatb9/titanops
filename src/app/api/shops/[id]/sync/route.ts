@@ -96,7 +96,7 @@ export async function POST(
                     data: {
                         syncStatus: 'SYNCED',
                         lastSyncAt: new Date(),
-                        syncedStock: item.stock_info_v2?.summary_info?.total_reserved_stock || 0,
+                        syncedStock: item.stock_info_v2?.summary_info?.total_available_stock || item.stock_info_v2?.seller_stock?.[0]?.stock || 0,
                     }
                 })
 
@@ -112,6 +112,7 @@ export async function POST(
                         userId: session.user.id,
                         name: item.item_name,
                         description: description, // Use parsed description
+                        brand: item.brand?.original_brand_name || item.brand?.brand_name,
                         images: item.image?.image_url_list || [],
                         sku: item.item_sku || `SHOPEE-${item.item_id}`,
                         status: 'ACTIVE',
@@ -121,7 +122,7 @@ export async function POST(
                                 name: "Default",
                                 sku: item.item_sku || `SHOPEE-${item.item_id}-DEF`,
                                 price: item.price_info?.[0]?.original_price || 0,
-                                stock: item.stock_info?.[0]?.normal_stock || 0,
+                                stock: item.stock_info_v2?.summary_info?.total_available_stock || item.stock_info_v2?.seller_stock?.[0]?.stock || 0,
                                 listings: {
                                     create: {
                                         shopId: shop.id,
@@ -130,7 +131,7 @@ export async function POST(
                                         syncStatus: 'SYNCED',
                                         lastSyncAt: new Date(),
                                         syncedPrice: item.price_info?.[0]?.original_price || 0,
-                                        syncedStock: item.stock_info?.[0]?.normal_stock || 0
+                                        syncedStock: item.stock_info_v2?.summary_info?.total_available_stock || item.stock_info_v2?.seller_stock?.[0]?.stock || 0
                                     }
                                 }
                             }
