@@ -15,12 +15,36 @@ import { Badge } from "@/components/ui/badge"
 import { ShopModal } from "@/components/shops/shop-modal"
 import { ShopSettingsDialog } from "@/components/shops/shop-settings-dialog"
 
+import { toast } from "sonner"
+
 export default function ShopsPage() {
     const [open, setOpen] = useState(false)
     const [settingsOpen, setSettingsOpen] = useState(false)
     const [selectedShop, setSelectedShop] = useState<any>(null)
     const [shops, setShops] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [isSyncing, setIsSyncing] = useState<string | null>(null) // Shop ID being synced
+
+    async function handleSync(shopId: string) {
+        setIsSyncing(shopId)
+        toast.info("Đang đồng bộ sản phẩm từ sàn...", { duration: 5000 })
+
+        try {
+            const res = await fetch(`/api/shops/${shopId}/sync`, { method: "POST" })
+            if (!res.ok) {
+                const err = await res.text()
+                throw new Error(err)
+            }
+            const data = await res.json()
+            toast.success(`Đồng bộ thành công! Đã cập nhật ${data.count} sản phẩm.`)
+            fetchShops()
+        } catch (error) {
+            console.error(error)
+            toast.error("Lỗi đồng bộ: Vui lòng thử lại sau.")
+        } finally {
+            setIsSyncing(null)
+        }
+    }
 
     // Fetch Shops
     const fetchShops = async () => {
@@ -98,8 +122,14 @@ export default function ShopsPage() {
                                     >
                                         <Settings2 className="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" title="Đồng bộ ngay">
-                                        <RefreshCw className="h-4 w-4" />
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        title="Đồng bộ ngay"
+                                        disabled={isSyncing === shop.id}
+                                        onClick={() => handleSync(shop.id)}
+                                    >
+                                        <RefreshCw className={`h-4 w-4 ${isSyncing === shop.id ? "animate-spin" : ""}`} />
                                     </Button>
                                 </div>
                             </CardFooter>
