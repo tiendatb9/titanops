@@ -44,12 +44,12 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     const initialData: ProductBuilderValues & { id: string } = {
         id: product.id,
         name: product.name,
-        sku: hasVariants ? product.sku : (defaultVariant?.sku || product.sku),
+        sku: (hasVariants ? product.sku : (defaultVariant?.sku || product.sku)) || "",
         description: product.description || "",
         descriptionHtml: product.descriptionHtml || "",
         syncDescription: true,
         images: product.images,
-        categoryId: product.categoryId,
+        categoryId: product.categoryId || "",
 
         // Spec placeholders
         weight: 100,
@@ -64,7 +64,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         variants: hasVariants ? product.variants.map(v => ({
             id: v.id,
             name: v.name,
-            sku: v.sku,
+            sku: v.sku || "",
             price: Number(v.price),
             stock: v.stock,
             image: v.image || "",
