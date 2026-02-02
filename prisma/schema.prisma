@@ -129,6 +129,7 @@ model Product {
   // Master Status
   sku         String?  // Master SKU (Optional container)
   status      String   @default("DRAFT") // ACTIVE, DRAFT, ARCHIVED
+  rawJson     Json?    // Debugging: Store raw API response
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

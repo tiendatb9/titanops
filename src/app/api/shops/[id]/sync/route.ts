@@ -83,9 +83,14 @@ export async function POST(
                     data: {
                         syncStatus: 'SYNCED',
                         lastSyncAt: new Date(),
-                        syncedStock: item.stock_info_v2?.summary_info?.total_reserved_stock || 0, // Placeholder mapping
-                        // In real Shopee API, stock is complex. 
+                        syncedStock: item.stock_info_v2?.summary_info?.total_reserved_stock || 0,
                     }
+                })
+
+                // Also update the Product rawJson
+                await prisma.product.update({
+                    where: { id: existingListing.variant!.productId },
+                    data: { rawJson: item as any }
                 })
             } else {
                 // CREATE NEW: Product -> Variant -> Listing
@@ -97,6 +102,7 @@ export async function POST(
                         images: item.image?.image_url_list || [],
                         sku: item.item_sku || `SHOPEE-${item.item_id}`,
                         status: 'ACTIVE',
+                        rawJson: item as any, // Save raw JSON for debugging
                         variants: {
                             create: {
                                 name: "Default",

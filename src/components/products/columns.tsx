@@ -11,6 +11,14 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Product } from "./schema"
@@ -101,6 +109,33 @@ export const columns: ColumnDef<Product>[] = [
                     {platforms.tiktok && <Badge variant="outline" className="bg-black text-white border-gray-800">TikTok</Badge>}
                     {platforms.lazada && <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">Lazada</Badge>}
                 </div>
+            )
+        }
+    },
+    {
+        id: "rawJson",
+        header: "Nguồn dữ liệu",
+        cell: ({ row }) => {
+            const raw = (row.original as any).rawJson
+            if (!raw) return <span className="text-muted-foreground text-xs">Trống</span>
+
+            return (
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-6 text-xs bg-blue-50 text-blue-700 border-blue-200">
+                            Xem JSON
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-[800px] max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle>Dữ liệu gốc từ Sàn</DialogTitle>
+                            <DialogDescription>Dữ liệu JSON thô được trả về từ API của sàn.</DialogDescription>
+                        </DialogHeader>
+                        <div className="bg-slate-950 text-slate-50 p-4 rounded-md text-xs font-mono whitespace-pre-wrap overflow-auto h-[500px]">
+                            {JSON.stringify(raw, null, 2)}
+                        </div>
+                    </DialogContent>
+                </Dialog>
             )
         }
     },
