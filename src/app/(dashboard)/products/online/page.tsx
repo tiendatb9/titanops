@@ -1,12 +1,84 @@
-"use client"
-
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, RefreshCw, Filter } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { prisma } from "@/lib/prisma"
+import { auth } from "@/lib/auth"
+import { DataTable } from "@/components/products/data-table"
+import { columns } from "@/components/products/columns"
+import { redirect } from "next/navigation"
 
-export default function OnlineProductsPage() {
+async function getOnlineProducts(userId: string) {
+    // 1. Get Stats (Count Listings by Platform)
+    // We count Listings that are ACTIVE
+    const [totalLive, shopeeLive, tiktokLive] = await Promise.all([
+        prisma.listing.count({
+            where: { shop: { userId }, status: 'ACTIVE' }
+        }),
+        prisma.listing.count({ // Shopee
+            where: { shop: { userId, platform: 'SHOPEE' }, status: 'ACTIVE' }
+        }),
+        prisma.listing.count({ // TikTok
+            where: { shop: { userId, platform: 'TIKTOK' }, status: 'ACTIVE' }
+        })
+    ])
+
+    // 2. Get Products that have at least one Listing
+    // For the table, we show "Products" but maybe annotated with platforms?
+    // Current columns logic expects "products" with "platforms" boolean map.
+
+    const products = await prisma.product.findMany({
+        where: { userId },
+        include: {
+            variants: {
+                include: {
+                    listings: { include: { shop: true } }
+                }
+            }
+        },
+        orderBy: { updatedAt: 'desc' }
+    })
+
+    // Transform for UI (matches columns schema)
+    const formattedProducts = products.map(p => {
+        // Find platforms this product is listed on
+        const platforms = {
+            shopee: p.variants.some(v => v.listings.some(l => l.shop.platform === 'SHOPEE')),
+            tiktok: p.variants.some(v => v.variants?.listings?.some(l => l.shop.platform === 'TIKTOK') || v.listings.some(l => l.shop.platform === 'TIKTOK')), // Listing linked to Variant
+            lazada: false
+        }
+
+        // Calculate Price/Stock range or total
+        // Simple logic: Take first variant or range
+        const price = p.variants[0]?.price ? Number(p.variants[0].price) : 0
+        const stock = p.variants.reduce((sum, v) => sum + v.stock, 0)
+
+        return {
+            id: p.id,
+            name: p.name,
+            sku: p.sku || "",
+            price: price,
+            stock: stock,
+            status: p.status === 'ACTIVE' ? 'active' : 'draft',
+            image: p.images[0] || "/placeholder.png",
+            platforms: platforms,
+            rawJson: p.rawJson
+        }
+    })
+
+    return {
+        stats: { total: totalLive, shopee: shopeeLive, tiktok: tiktokLive },
+        data: formattedProducts
+    }
+}
+
+export default async function OnlineProductsPage() {
+    const session = await auth()
+    if (!session?.user?.id) redirect("/login")
+
+    const { stats, data } = await getOnlineProducts(session.user.id)
+
     return (
         <div className="h-full flex-1 flex-col space-y-8 p-8 flex">
             <div className="flex items-center justify-between space-y-2">
@@ -42,34 +114,31 @@ export default function OnlineProductsPage() {
                         <CardTitle className="text-sm font-medium">Tổng sản phẩm Live</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">1,240</div>
+                        <div className="text-2xl font-bold">{stats.total}</div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Shopee (3 Shops)</CardTitle>
+                        <CardTitle className="text-sm font-medium">Shopee</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">850</div>
+                        <div className="text-2xl font-bold">{stats.shopee}</div>
+                        <p className="text-xs text-muted-foreground">Đang hoạt động</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">TikTok Shop (2 Shops)</CardTitle>
+                        <CardTitle className="text-sm font-medium">TikTok Shop</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">390</div>
+                        <div className="text-2xl font-bold">{stats.tiktok}</div>
+                        <p className="text-xs text-muted-foreground">Sắp ra mắt</p>
                     </CardContent>
                 </Card>
             </div>
 
-            <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
-                <div className="flex flex-col items-center gap-1 text-center">
-                    <h3 className="text-2xl font-bold tracking-tight">Danh sách sản phẩm sàn</h3>
-                    <p className="text-sm text-muted-foreground">
-                        Chức năng đồng bộ đang được phát triển. Dữ liệu sẽ hiển thị ở đây.
-                    </p>
-                </div>
+            <div className="flex-1 overflow-auto rounded-md border">
+                <DataTable data={data} columns={columns} />
             </div>
         </div>
     )
