@@ -132,6 +132,6 @@ export async function POST(
 
     } catch (error) {
         console.error("[SHOP_SYNC]", error)
-        return new NextResponse("Internal Error", { status: 500 })
+        return new NextResponse(`Internal Error: ${(error as Error).message}`, { status: 500 })
     }
 }
