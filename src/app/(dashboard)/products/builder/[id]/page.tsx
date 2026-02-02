@@ -4,13 +4,15 @@ import { redirect, notFound } from "next/navigation"
 import { ProductBuilder } from "@/components/products/builder/product-builder"
 import { ProductBuilderValues } from "@/components/products/builder/schema"
 
-export default async function EditProductPage({ params }: { params: { id: string } }) {
+export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await auth()
     if (!session?.user?.id) redirect("/login")
 
+    const { id } = await params
+
     // Fetch Product with Variants
     const product = await prisma.product.findUnique({
-        where: { id: params.id, userId: session.user.id },
+        where: { id: id, userId: session.user.id },
         include: { variants: true }
     })
 

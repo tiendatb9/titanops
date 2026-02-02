@@ -4,7 +4,7 @@ import { NextResponse } from "next/server"
 
 export async function PUT(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await auth()
@@ -13,7 +13,7 @@ export async function PUT(
         }
 
         const body = await req.json()
-        const productId = params.id
+        const { id: productId } = await params
 
         // Validate ownership
         const existingProduct = await prisma.product.findUnique({
