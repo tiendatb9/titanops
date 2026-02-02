@@ -45,7 +45,7 @@ async function getOnlineProducts(userId: string) {
         // Find platforms this product is listed on
         const platforms = {
             shopee: p.variants.some(v => v.listings.some(l => l.shop.platform === 'SHOPEE')),
-            tiktok: p.variants.some(v => v.variants?.listings?.some(l => l.shop.platform === 'TIKTOK') || v.listings.some(l => l.shop.platform === 'TIKTOK')), // Listing linked to Variant
+            tiktok: p.variants.some(v => v.listings.some(l => l.shop.platform === 'TIKTOK')),
             lazada: false
         }
 
