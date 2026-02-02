@@ -10,10 +10,18 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
     const { id } = await params
 
-    // Fetch Product with Variants
+    // Fetch Product with Variants AND Listings to rebuild Channels
     const product = await prisma.product.findUnique({
         where: { id: id, userId: session.user.id },
-        include: { variants: true }
+        include: {
+            variants: {
+                include: {
+                    listings: {
+                        include: { shop: true }
+                    }
+                }
+            }
+        }
     })
 
     if (!product) notFound()
@@ -24,22 +32,31 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     const otherVariants = product.variants.filter(v => v.name !== "Default")
     const hasVariants = otherVariants.length > 0
 
-    // TODO: Reconstruct Tiers from Variant Names if we want to support editing Tiers fully.
-    // This is hard because we store flattened Variants. 
-    // For now, if it has variants, we might just list them in the table without reconstructing the "Tier Generator" state perfectly
-    // or we assume a simple "Tier 1 - Tier 2" logic based on name splitting.
+    // Extract Unique Channels (Shops) from Listings
+    // A product might have multiple variants linked to the same shop.
+    // We derive the "Product Level" link from the variants.
+    const channelMap = new Map<string, { shopId: string, shopName: string, platform: any, platformItemId: string }>()
 
-    // Simplification for MVP:
-    // If hasVariants, we load them into `variants` array.
-    // We might leave `variationTiers` empty or try to infer.
-    // Let's infer for better UX if possible, or just raw edit.
+    product.variants.forEach(v => {
+        v.listings.forEach(l => {
+            if (!channelMap.has(l.shopId)) {
+                channelMap.set(l.shopId, {
+                    shopId: l.shop.id,
+                    shopName: l.shop.name,
+                    platform: l.shop.platform,
+                    platformItemId: l.platformItemId
+                })
+            }
+        })
+    })
 
-    // For now, let's just map the raw variants to the table so the user can edit Price/Stock/SKU.
-    // Re-generating the matrix (Tiers) from existing data is complex.
-    // Strategy: 
-    // 1. Load existing variants.
-    // 2. Hide "Generator" by default. 
-    // 3. Allow user to add new variants manually or via generator if they re-setup tiers.
+    const channels = Array.from(channelMap.values()).map(c => ({
+        shopId: c.shopId,
+        shopName: c.shopName,
+        platform: c.platform,
+        platformItemId: c.platformItemId,
+        isActive: true
+    }))
 
     const initialData: ProductBuilderValues & { id: string } = {
         id: product.id,
@@ -77,7 +94,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         stock: !hasVariants ? Number(defaultVariant?.stock || 0) : 0,
         barcode: !hasVariants ? (defaultVariant?.barcode || "") : "",
 
-        channels: [] // We'd fetch Listings here ideally
+        channels: channels
     }
 
     return <ProductBuilder initialData={initialData} />

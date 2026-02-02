@@ -29,6 +29,7 @@ export const channelOverrideSchema = z.object({
     shopId: z.string(),
     shopName: z.string(),
     platform: z.enum(["SHOPEE", "TIKTOK", "LAZADA", "TIKI", "OTHER"]),
+    platformItemId: z.string().optional(), // Added to track External ID
     isActive: z.boolean().default(true),
 
     // Specific Overrides
