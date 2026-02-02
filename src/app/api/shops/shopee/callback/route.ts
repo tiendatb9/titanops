@@ -22,8 +22,16 @@ export async function GET(req: Request) {
 
         // tokenData structure: { access_token, refresh_token, expire_in, ... }
 
-        // Determine Shop Name (We might need another API call to get shop info, but for now use ID)
-        const shopName = `Shopee Shop ${shopId}`
+        // Determine Shop Name
+        let shopName = `Shopee Shop ${shopId}`
+        try {
+            const shopInfo = await ShopeeClient.getShopInfo(tokenData.access_token, Number(shopId))
+            if (shopInfo && shopInfo.shop_name) {
+                shopName = shopInfo.shop_name
+            }
+        } catch (e) {
+            console.warn("Could not fetch shop name", e)
+        }
 
         // Upsert Shop
         await prisma.shop.upsert({
@@ -47,7 +55,8 @@ export async function GET(req: Request) {
                 }
             },
             update: {
-                // Refresh tokens
+                // Refresh tokens and update name
+                name: shopName,
                 isActive: true,
                 credentials: {
                     shopId: shopId,

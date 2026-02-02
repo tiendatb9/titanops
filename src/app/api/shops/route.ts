@@ -19,11 +19,23 @@ export async function GET() {
             select: {
                 id: true,
                 name: true,
-                platform: true
+                platform: true,
+                isActive: true,
+                createdAt: true,
             }
         })
 
-        return NextResponse.json(shops)
+        const formattedShops = shops.map(shop => ({
+            id: shop.id,
+            name: shop.name,
+            platform: shop.platform,
+            status: shop.isActive ? 'active' : 'disconnected',
+            // Pseudo-stats for now
+            products: 0,
+            lastSync: 'Vừa xong'
+        }))
+
+        return NextResponse.json(formattedShops)
     } catch (error) {
         console.error("[SHOPS_GET]", error)
         return new NextResponse("Internal Error", { status: 500 })

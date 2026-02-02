@@ -90,5 +90,43 @@ export const ShopeeClient = {
         }
 
         return res.json()
+    },
+
+    /**
+     * Get Shop Info
+     */
+    async getShopInfo(accessToken: string, shopId: number) {
+        if (!PARTNER_ID || !PARTNER_KEY) throw new Error("Missing Shopee Config")
+
+        const path = "/api/v2/shop/get_shop_info"
+        const timestamp = Math.floor(Date.now() / 1000)
+
+        // V2 Public API request structure is generally generic
+        // But for shop info we need standard common params + access_token + shop_id in URL for signature?
+        // Actually get_shop_info is a "shop" level API.
+        // Sign: partner_id + path + timestamp + access_token + shop_id
+
+        const baseString = `${PARTNER_ID}${path}${timestamp}${accessToken}${shopId}`
+        const sign = crypto.createHmac('sha256', PARTNER_KEY).update(baseString).digest('hex')
+
+        const url = `https://partner.shopeemobile.com${path}?partner_id=${PARTNER_ID}&timestamp=${timestamp}&access_token=${accessToken}&shop_id=${shopId}&sign=${sign}`
+
+        const res = await fetch(url, {
+            method: "GET"
+        })
+
+        if (!res.ok) {
+            const err = await res.text()
+            // Don't throw, return null so we can fallback
+            console.error("Shopee Shop Info Warning:", err)
+            return null
+        }
+
+        const json = await res.json()
+        if (json.error) {
+            console.error("Shopee Shop Info Error:", json)
+            return null
+        }
+        return json.response
     }
 }
