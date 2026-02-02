@@ -66,6 +66,11 @@ export function ShopModal({ open, onOpenChange }: ShopModalProps) {
 
         // Titan App Mode (OAuth)
         if (!values.useCustomApp) {
+            // Save custom name to cookie to retrieve after callback
+            if (values.name) {
+                document.cookie = `titan_pending_shop_name=${encodeURIComponent(values.name)}; path=/; max-age=600`
+            }
+
             if (values.platform === Platform.SHOPEE) {
                 window.location.href = "/api/shops/shopee/auth"
                 return

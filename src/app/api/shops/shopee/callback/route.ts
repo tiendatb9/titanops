@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ShopeeClient } from "@/lib/shopee"
 import { NextResponse } from "next/server"
+import { cookies } from "next/headers"
 
 export async function GET(req: Request) {
     try {
@@ -22,15 +23,23 @@ export async function GET(req: Request) {
 
         // tokenData structure: { access_token, refresh_token, expire_in, ... }
 
-        // Determine Shop Name
-        let shopName = `Shopee Shop ${shopId}`
-        try {
-            const shopInfo = await ShopeeClient.getShopInfo(tokenData.access_token, Number(shopId))
-            if (shopInfo && shopInfo.shop_name) {
-                shopName = shopInfo.shop_name
+        // Determine Shop Name (Priority: Custom Cookie > Real Shop Name > Shop ID)
+        const cookieStore = await cookies()
+        const pendingName = cookieStore.get("titan_pending_shop_name")?.value
+
+        let shopName = pendingName ? decodeURIComponent(pendingName) : `Shopee Shop ${shopId}`
+
+
+        // If no custom name, try to fetch real name
+        if (!pendingName) {
+            try {
+                const shopInfo = await ShopeeClient.getShopInfo(tokenData.access_token, Number(shopId))
+                if (shopInfo && shopInfo.shop_name) {
+                    shopName = shopInfo.shop_name
+                }
+            } catch (e) {
+                console.warn("Could not fetch shop name", e)
             }
-        } catch (e) {
-            console.warn("Could not fetch shop name", e)
         }
 
         // Upsert Shop
