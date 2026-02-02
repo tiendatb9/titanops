@@ -13,12 +13,12 @@ import {
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ShopModal } from "@/components/shops/shop-modal"
-
-// Mock Data
-// Removed Mock Data
+import { ShopSettingsDialog } from "@/components/shops/shop-settings-dialog"
 
 export default function ShopsPage() {
     const [open, setOpen] = useState(false)
+    const [settingsOpen, setSettingsOpen] = useState(false)
+    const [selectedShop, setSelectedShop] = useState<any>(null)
     const [shops, setShops] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
@@ -87,7 +87,15 @@ export default function ShopsPage() {
                                     {shop.status === 'active' ? 'Đang hoạt động' : 'Mất kết nối'}
                                 </Badge>
                                 <div className="flex gap-2">
-                                    <Button variant="ghost" size="icon" title="Cấu hình">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        title="Cấu hình"
+                                        onClick={() => {
+                                            setSelectedShop(shop)
+                                            setSettingsOpen(true)
+                                        }}
+                                    >
                                         <Settings2 className="h-4 w-4" />
                                     </Button>
                                     <Button variant="ghost" size="icon" title="Đồng bộ ngay">
@@ -119,8 +127,15 @@ export default function ShopsPage() {
                 open={open}
                 onOpenChange={(v) => {
                     setOpen(v)
-                    if (!v) fetchShops() // Refresh on close
+                    if (!v) fetchShops()
                 }}
+            />
+
+            <ShopSettingsDialog
+                open={settingsOpen}
+                onOpenChange={setSettingsOpen}
+                shop={selectedShop}
+                onSuccess={fetchShops}
             />
         </div>
     )
