@@ -62,7 +62,6 @@ async function getOnlineProducts(userId: string) {
             stock: stock,
             status: (p.status === 'ACTIVE' ? 'active' : 'draft') as "active" | "draft" | "archived",
             image: p.images[0] || "/placeholder.png",
-            image: p.images[0] || "/placeholder.png",
             platforms: platforms,
             rawJson: p.rawJson,
             sourceId: p.sourceId || undefined,
