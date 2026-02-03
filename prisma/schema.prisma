@@ -153,7 +153,14 @@ model Product {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  listings    Listing[] // Linked to platforms
+  // Sourcing Data (Imported from Extension)
+  source        String?   // shopee, lazada, tiktok
+  sourceId      String?   // item_id (Platform Product ID)
+  sourceSkuId   String?   // model_id (Platform Variant ID)
+  sourceUrl     String?   // Original URL
+  sourceData    Json?     // Raw crawled data
+
+  listings      Listing[] // Linked to platforms
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, parentId])

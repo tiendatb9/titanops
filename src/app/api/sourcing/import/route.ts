@@ -12,7 +12,35 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json()
-        const { name, description, price, image, url, source, raw } = body
+        const { name, description, price, image, url, source, raw, variants, source_id } = body
+        const userId = session.user.id
+        const userId = session.user.id
+
+        // Prepare variants data
+        let variantsCreateData: any[] = []
+        if (variants && Array.isArray(variants) && variants.length > 0) {
+            variantsCreateData = variants.map((v: any) => ({
+                userId: userId,
+                name: v.name || "Variant",
+                sku: v.sku || `DRAFT-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                price: v.price || price || 0,
+                stock: v.stock || 0,
+                images: v.image ? [v.image] : [],
+                status: "DRAFT",
+                sourceSkuId: v.source_sku_id ? String(v.source_sku_id) : undefined
+            }))
+        } else {
+            // Default Variant
+            variantsCreateData = [{
+                userId: session.user.id,
+                name: "Default",
+                sku: `DRAFT-${Date.now()}-DEF`,
+                price: price || 0,
+                stock: 0,
+                status: "DRAFT",
+                sourceSkuId: source_id ? String(source_id) : undefined
+            }]
+        }
 
         if (!name) {
             return NextResponse.json(
@@ -34,16 +62,14 @@ export async function POST(request: Request) {
                 images: image ? [image] : [],
                 sku: `DRAFT-${Date.now()}`, // Auto-gen temp SKU
 
+                source: source || "shopee",
+                sourceId: source_id ? String(source_id) : undefined,
+                sourceUrl: url,
+                sourceData: raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : undefined,
+
                 status: "DRAFT",
                 variants: {
-                    create: {
-                        userId: session.user.id, // REQUIRED: Child must assume ownership
-                        name: "Default",
-                        sku: `DRAFT-${Date.now()}-DEF`,
-                        price: price || 0,
-                        stock: 0,
-                        status: "DRAFT"
-                    }
+                    create: variantsCreateData
                 },
             }
         })
