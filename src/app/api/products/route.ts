@@ -39,67 +39,64 @@ export async function POST(req: Request) {
                 }
             })
 
-            // 2. Handle Variants
+            // 2. Handle Variants (Recursive Products)
+            let variants: any[] = []
+
             if (data.hasVariants && data.variants.length > 0) {
-                // Create Variants
+                // Create Child Products
                 for (const v of data.variants) {
-                    await tx.variant.create({
+                    const child = await tx.product.create({
                         data: {
-                            productId: product.id,
+                            userId: userId,
+                            parentId: product.id, // Link to Parent
                             name: v.name,
                             sku: v.sku,
                             barcode: v.barcode,
                             price: v.price || 0,
                             stock: v.stock || 0,
-                            image: v.image
+                            images: v.image ? [v.image] : [],
+                            status: "ACTIVE"
                         }
                     })
+                    variants.push(child)
                 }
             } else {
-                // Single Product Mode: Create a "Default" Variant or just use Product fields?
-                // Our schema says Variant is optional for Listing if we map directly? 
-                // Wait, Listing relates to Variant?
-                // model Listing { variantId String? ... }
-                // Ideally, even single products should have 1 Master Variant (Default) across system to unify logic
-                // But for simplicity let's assume Single Mode just uses Product level data?
-                // Actually the `Listing` model links to `Shop`. 
-                // Let's create a "Default" variant for Single Product to keep architecture consistent (Master -> Variant -> Listing)
-
-                await tx.variant.create({
+                // Single Product Mode: Create a "Default" Child?
+                // In new model, Single Product IS the SKU.
+                // But to keep architecture consistent (Parent -> Child -> Listing), we can create a Default child.
+                // OR we link Listing to Parent? 
+                // The prompt discussion implied "Every SKU has its own ID". 
+                // Let's create a Default child for consistency in Listings linking.
+                const child = await tx.product.create({
                     data: {
-                        productId: product.id,
+                        userId: userId,
+                        parentId: product.id,
                         name: "Default",
-                        sku: data.sku, // Master SKU
+                        sku: data.sku,
                         barcode: data.barcode,
                         price: data.price || 0,
                         stock: data.stock || 0,
-                        image: data.images[0] // Use first image
+                        images: data.images[0] ? [data.images[0]] : [],
+                        status: "ACTIVE"
                     }
                 })
+                variants.push(child)
             }
 
             // 3. Create Listings (Channels)
-            // We need to fetch the created variants to link them
-            const createdVariants = await tx.variant.findMany({ where: { productId: product.id } })
-
-            // For now, if it's single product, we link all listings to that single variant.
-            // If it's multi-variant, the "Channel Override" UI currently only sets price/stock globally for the shop (Multiplier logic maybe?)
-            // OR the Channel Publisher UI logic defaults to "All Variants in this Shop get this price override?".
-            // The current UI sends `channels` array which has generic price/stock.
-            // Let's assume this applies to ALL variants for that shop.
+            // Link listings to the Created Child Products (variants)
 
             for (const channel of data.channels) {
                 if (channel.isActive) {
-                    // Create Listing for EACH variant
-                    for (const variant of createdVariants) {
+                    // Create Listing for EACH child product
+                    for (const variant of variants) {
                         await tx.listing.create({
                             data: {
                                 shopId: channel.shopId,
-                                variantId: variant.id,
-                                platformItemId: "PENDING", // Will be updated after sync
+                                productId: variant.id, // Valid: Linking to Child Product
+                                platformItemId: "PENDING",
                                 status: "ACTIVE",
                                 syncStatus: "PENDING",
-                                // Simple override logic: If channel has explicit price, use it. Else use variant price.
                                 syncedPrice: channel.price && channel.price > 0 ? channel.price : variant.price,
                                 syncedStock: channel.stock && channel.stock > 0 ? channel.stock : variant.stock,
                             }

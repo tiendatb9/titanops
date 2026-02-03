@@ -58,7 +58,7 @@ export async function POST(
         for (const item of productDetails) {
             const platformItemId = String(item.item_id)
 
-            // Parse Description (Handle Extended Type)
+            // Parse Description
             let description = item.description
             if (item.description_type === 'extended' && item.description_info?.extended_description?.field_list) {
                 const fields = item.description_info.extended_description.field_list
@@ -77,20 +77,11 @@ export async function POST(
                     shopId: shop.id,
                     platformItemId: platformItemId
                 },
-                include: { variant: { include: { product: true } } }
+                include: { product: true } // product is now the relation (could be child or parent)
             })
 
-            if (existingListing && existingListing.variant?.product) {
-                // UPDATE: Just update price/stock and timestamps
-                // TODO: Update Product fields if user allows? For now, sync price/stock to Listing.
-                // We update the Listing syncedPrice/Stock
-                // Note: Shopee Item has `price_info`? No, Base Info has `price_info` or `original_price`.
-                // Let's use `original_price` for now.
-                // Actually base info has `stock_info` too.
-
-                // Assuming single variant item for simplicity in "Basic Sync". 
-                // Creating full variant matrix sync is complex.
-
+            if (existingListing && existingListing.product) {
+                // UPDATE
                 await prisma.listing.update({
                     where: { id: existingListing.id },
                     data: {
@@ -102,27 +93,35 @@ export async function POST(
 
                 // Also update the Product rawJson
                 await prisma.product.update({
-                    where: { id: existingListing.variant!.productId },
+                    where: { id: existingListing.product.id },
                     data: { rawJson: item as any }
                 })
             } else {
-                // CREATE NEW: Product -> Variant -> Listing
-                const newProduct = await prisma.product.create({
+                // CREATE NEW: Parent Product -> Child Product -> Listing
+                // Assuming "Single Variant" mapping for now for simplicity, 
+                // or if item has models, we should create multiple children.
+                // For MVP Sync, if no models, create 1 Default Child.
+
+                // TODO: Handle item.has_model (Variations)
+
+                const newParent = await prisma.product.create({
                     data: {
                         userId: session.user.id,
                         name: item.item_name,
-                        description: description, // Use parsed description
+                        description: description,
                         brand: item.brand?.original_brand_name || item.brand?.brand_name,
                         images: item.image?.image_url_list || [],
                         sku: item.item_sku || `SHOPEE-${item.item_id}`,
                         status: 'ACTIVE',
-                        rawJson: item as any, // Save raw JSON for debugging
+                        rawJson: item as any,
                         variants: {
                             create: {
+                                userId: session.user.id,
                                 name: "Default",
                                 sku: item.item_sku || `SHOPEE-${item.item_id}-DEF`,
                                 price: item.price_info?.[0]?.original_price || 0,
                                 stock: item.stock_info_v2?.summary_info?.total_available_stock || item.stock_info_v2?.seller_stock?.[0]?.stock || 0,
+                                status: 'ACTIVE',
                                 listings: {
                                     create: {
                                         shopId: shop.id,
