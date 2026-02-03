@@ -159,6 +159,13 @@ model Product {
   sourceSkuId   String?   // model_id (Platform Variant ID)
   sourceUrl     String?   // Original URL
   sourceData    Json?     // Raw crawled data
+  
+  // Extended Platform Data (Refctored for Rich UI)
+  originalPrice Decimal?  @default(0)
+  promoPrice    Decimal?  @default(0)
+  promoId       String?   
+  daysToShip    Int?      @default(2)
+  platformStatus String?  // NORMAL, BANNED, DELETED
 
   listings      Listing[] // Linked to platforms
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)

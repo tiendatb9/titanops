@@ -49,7 +49,7 @@ export const columns: ColumnDef<Product>[] = [
     },
     {
         accessorKey: "name",
-        header: "Sản phẩm",
+        header: "Sản phẩm (ID / SKU)",
         cell: ({ row }) => {
             const product = row.original
             return (
@@ -61,13 +61,22 @@ export const columns: ColumnDef<Product>[] = [
                             className="h-full w-full object-cover"
                         />
                     </div>
-                    <div className="flex flex-col max-w-[200px]">
-                        <span className="font-medium truncate" title={product.name}>{product.name}</span>
+                    <div className="flex flex-col max-w-[220px]">
+                        <div className="flex items-center gap-1">
+                            <a href={product.sourceUrl || "#"} target="_blank" className="font-medium truncate hover:underline hover:text-blue-600" title={product.name}>
+                                {product.name}
+                            </a>
+                        </div>
                         <div className="flex flex-col gap-0.5 mt-1">
-                            <span className="text-[10px] text-muted-foreground">Master SKU: {product.sku}</span>
-                            {product.sourceId && (
-                                <span className="text-[10px] text-blue-600 bg-blue-50 px-1 rounded w-fit">ID: {product.sourceId}</span>
-                            )}
+                            <span className="text-[10px] text-muted-foreground">SKU: {product.sku}</span>
+                            <div className="flex gap-1">
+                                {product.sourceId && (
+                                    <span className="text-[10px] text-blue-600 bg-blue-50 px-1 rounded border border-blue-100" title="Item ID">ID: {product.sourceId}</span>
+                                )}
+                                {product.daysToShip && (
+                                    <span className="text-[10px] text-orange-600 bg-orange-50 px-1 rounded border border-orange-100" title="Days to Ship">DTS: {product.daysToShip}</span>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -76,33 +85,46 @@ export const columns: ColumnDef<Product>[] = [
     },
     {
         accessorKey: "variants",
-        header: "Chi tiết biến thể",
+        header: "Chi tiết biến thể (Model ID / Giá / Kho)",
         cell: ({ row }) => {
             const variants = row.original.variants
             return (
-                <div className="flex flex-col gap-2 text-sm min-w-[300px]">
+                <div className="flex flex-col gap-2 text-sm min-w-[400px]">
                     <div className="grid grid-cols-12 gap-2 font-medium text-xs text-muted-foreground border-b pb-1">
-                        <div className="col-span-4">SKU</div>
-                        <div className="col-span-3">Giá</div>
+                        <div className="col-span-4">Phân loại</div>
+                        <div className="col-span-3">Giá bán</div>
                         <div className="col-span-2">Kho</div>
-                        <div className="col-span-3">ID Sàn</div>
+                        <div className="col-span-3">Trạng thái</div>
                     </div>
                     {variants.map((v) => (
-                        <div key={v.id} className="grid grid-cols-12 gap-2 items-center border-b last:border-0 pb-1 last:pb-0">
+                        <div key={v.id} className="grid grid-cols-12 gap-2 items-center border-b last:border-0 pb-1 last:pb-0 font-normal">
                             <div className="col-span-4 flex flex-col">
-                                <span className="font-medium truncate" title={v.sku}>{v.sku}</span>
-                                {v.name !== 'Default' && <span className="text-[10px] text-muted-foreground truncate">{v.name}</span>}
+                                <span className="text-xs truncate font-medium" title={v.name}>{v.name}</span>
+                                <span className="text-[10px] text-muted-foreground truncate" title={v.sourceSkuId}>ID: {v.sourceSkuId || "-"}</span>
+                                <span className="text-[10px] text-muted-foreground truncate">{v.sku}</span>
                             </div>
-                            <div className="col-span-3 text-xs">
-                                {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(v.price)}
+                            <div className="col-span-3 flex flex-col justify-center">
+                                {v.originalPrice && v.originalPrice > v.price && (
+                                    <span className="text-[10px] text-muted-foreground line-through">
+                                        {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(v.originalPrice)}
+                                    </span>
+                                )}
+                                <span className="text-xs font-semibold text-red-600">
+                                    {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(v.price)}
+                                </span>
+                                {v.promoId && <span className="text-[9px] text-green-600">KM: {v.promoId}</span>}
                             </div>
                             <div className="col-span-2 text-xs">
                                 {v.stock}
                             </div>
                             <div className="col-span-3 flex flex-col">
-                                <span className="text-[10px] text-muted-foreground truncate" title={v.sourceSkuId || "N/A"}>
-                                    {v.sourceSkuId || "-"}
-                                </span>
+                                {v.status === 'NORMAL' ? (
+                                    <span className="text-[10px] text-green-600 bg-green-50 px-1 rounded w-fit">NORMAL</span>
+                                ) : v.status === 'BANNED' ? (
+                                    <span className="text-[10px] text-red-600 bg-red-50 px-1 rounded w-fit">BANNED</span>
+                                ) : (
+                                    <span className="text-[10px] text-gray-500">{v.status || "-"}</span>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -114,13 +136,25 @@ export const columns: ColumnDef<Product>[] = [
     // RAW JSON Column (Hidden or moved to actions)
     */
     {
+        accessorKey: "platformStatus",
+        header: "TT Sàn",
+        cell: ({ row }) => {
+            const status = row.original.platformStatus || "NORMAL"
+            return (
+                <Badge variant={status === "NORMAL" ? "outline" : "destructive"} className={status === "NORMAL" ? "text-green-600 border-green-200 bg-green-50" : ""}>
+                    {status}
+                </Badge>
+            )
+        }
+    },
+    {
         accessorKey: "status",
-        header: "Trạng thái",
+        header: "TT App",
         cell: ({ row }) => {
             const status = row.getValue("status") as string
             return (
                 <Badge variant={status === "active" ? "default" : "secondary"}>
-                    {status === "active" ? "Đang bán" : status === "draft" ? "Nháp" : "Lưu trữ"}
+                    {status === "active" ? "Active" : "Draft"}
                 </Badge>
             )
         }

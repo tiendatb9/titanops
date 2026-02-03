@@ -12,12 +12,26 @@ export type Product = {
         lazada?: boolean
     }
     sourceId?: string
+    sourceUrl?: string
+    // Rich Data Fields
+    originalPrice?: number
+    promoPrice?: number
+    promoId?: string
+    daysToShip?: number
+    platformStatus?: string
+
     variants: {
         id: string
         name: string
         sku: string
-        price: number
+        price: number // Current (Promo) Price
         stock: number
         sourceSkuId?: string
+
+        // Variant Rich Data
+        originalPrice?: number
+        promoPrice?: number
+        promoId?: string
+        status?: string
     }[]
 }

@@ -65,13 +65,27 @@ async function getOnlineProducts(userId: string) {
             platforms: platforms,
             rawJson: p.rawJson,
             sourceId: p.sourceId || undefined,
+            sourceUrl: p.sourceUrl || undefined,
+
+            // Rich Data Mapping
+            originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
+            promoPrice: p.promoPrice ? Number(p.promoPrice) : undefined,
+            promoId: p.promoId || undefined,
+            daysToShip: p.daysToShip || undefined,
+            platformStatus: p.platformStatus || undefined,
+
             variants: p.variants.map(v => ({
                 id: v.id,
                 name: v.name,
                 sku: v.sku || "",
-                price: Number(v.price),
+                price: Number(v.price), // Current Price
                 stock: v.stock,
-                sourceSkuId: v.sourceSkuId || undefined
+                sourceSkuId: v.sourceSkuId || undefined,
+
+                originalPrice: v.originalPrice ? Number(v.originalPrice) : undefined,
+                promoPrice: v.promoPrice ? Number(v.promoPrice) : undefined,
+                promoId: v.promoId || undefined,
+                status: v.platformStatus || undefined
             }))
         }
     })
