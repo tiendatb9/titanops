@@ -14,10 +14,11 @@ export async function PUT(
 
         const body = await req.json()
         const { id: productId } = await params
+        const userId = session.user.id
 
         // Validate ownership
         const existingProduct = await prisma.product.findUnique({
-            where: { id: productId, userId: session.user.id }
+            where: { id: productId, userId: userId }
         })
 
         if (!existingProduct) {
@@ -71,7 +72,7 @@ export async function PUT(
                         // Create new Child Product
                         await tx.product.create({
                             data: {
-                                userId: session.user.id,
+                                userId: userId,
                                 parentId: product.id,
                                 name: v.name,
                                 sku: v.sku,
