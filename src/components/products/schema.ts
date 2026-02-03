@@ -11,4 +11,13 @@ export type Product = {
         tiktok?: boolean
         lazada?: boolean
     }
+    sourceId?: string
+    variants: {
+        id: string
+        name: string
+        sku: string
+        price: number
+        stock: number
+        sourceSkuId?: string
+    }[]
 }

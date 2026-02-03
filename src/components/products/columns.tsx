@@ -54,92 +54,65 @@ export const columns: ColumnDef<Product>[] = [
             const product = row.original
             return (
                 <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-md border bg-muted/50 overflow-hidden">
+                    <div className="h-12 w-12 rounded-md border bg-muted/50 overflow-hidden shrink-0">
                         <img
                             src={product.image}
                             alt={product.name}
                             className="h-full w-full object-cover"
                         />
                     </div>
-                    <div className="flex flex-col">
-                        <span className="font-medium truncate max-w-[200px]">{product.name}</span>
-                        <span className="text-xs text-muted-foreground">SKU: {product.sku}</span>
+                    <div className="flex flex-col max-w-[200px]">
+                        <span className="font-medium truncate" title={product.name}>{product.name}</span>
+                        <div className="flex flex-col gap-0.5 mt-1">
+                            <span className="text-[10px] text-muted-foreground">Master SKU: {product.sku}</span>
+                            {product.sourceId && (
+                                <span className="text-[10px] text-blue-600 bg-blue-50 px-1 rounded w-fit">ID: {product.sourceId}</span>
+                            )}
+                        </div>
                     </div>
                 </div>
             )
         },
     },
     {
-        accessorKey: "price",
-        header: ({ column }) => {
+        accessorKey: "variants",
+        header: "Chi tiết biến thể",
+        cell: ({ row }) => {
+            const variants = row.original.variants
             return (
-                <Button
-                    variant="ghost"
-                    onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-                >
-                    Giá bán
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-            )
-        },
-        cell: ({ row }) => {
-            const amount = parseFloat(row.getValue("price"))
-            const formatted = new Intl.NumberFormat("vi-VN", {
-                style: "currency",
-                currency: "VND",
-            }).format(amount)
-
-            return <div className="font-medium">{formatted}</div>
-        },
-    },
-    {
-        accessorKey: "stock",
-        header: "Tồn kho",
-        cell: ({ row }) => {
-            return <div className="font-medium">{row.getValue("stock")}</div>
-        }
-    },
-    {
-        accessorKey: "platforms",
-        header: "Sàn liên kết",
-        cell: ({ row }) => {
-            const platforms = row.original.platforms
-            return (
-                <div className="flex gap-1">
-                    {platforms.shopee && <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">Shopee</Badge>}
-                    {platforms.tiktok && <Badge variant="outline" className="bg-black text-white border-gray-800">TikTok</Badge>}
-                    {platforms.lazada && <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">Lazada</Badge>}
+                <div className="flex flex-col gap-2 text-sm min-w-[300px]">
+                    <div className="grid grid-cols-12 gap-2 font-medium text-xs text-muted-foreground border-b pb-1">
+                        <div className="col-span-4">SKU</div>
+                        <div className="col-span-3">Giá</div>
+                        <div className="col-span-2">Kho</div>
+                        <div className="col-span-3">ID Sàn</div>
+                    </div>
+                    {variants.map((v) => (
+                        <div key={v.id} className="grid grid-cols-12 gap-2 items-center border-b last:border-0 pb-1 last:pb-0">
+                            <div className="col-span-4 flex flex-col">
+                                <span className="font-medium truncate" title={v.sku}>{v.sku}</span>
+                                {v.name !== 'Default' && <span className="text-[10px] text-muted-foreground truncate">{v.name}</span>}
+                            </div>
+                            <div className="col-span-3 text-xs">
+                                {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(v.price)}
+                            </div>
+                            <div className="col-span-2 text-xs">
+                                {v.stock}
+                            </div>
+                            <div className="col-span-3 flex flex-col">
+                                <span className="text-[10px] text-muted-foreground truncate" title={v.sourceSkuId || "N/A"}>
+                                    {v.sourceSkuId || "-"}
+                                </span>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )
         }
     },
-    {
-        id: "rawJson",
-        header: "Nguồn dữ liệu",
-        cell: ({ row }) => {
-            const raw = (row.original as any).rawJson
-            if (!raw) return <span className="text-muted-foreground text-xs">Trống</span>
-
-            return (
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-6 text-xs bg-blue-50 text-blue-700 border-blue-200">
-                            Xem JSON
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-[800px] max-h-[80vh] overflow-y-auto">
-                        <DialogHeader>
-                            <DialogTitle>Dữ liệu gốc từ Sàn</DialogTitle>
-                            <DialogDescription>Dữ liệu JSON thô được trả về từ API của sàn.</DialogDescription>
-                        </DialogHeader>
-                        <div className="bg-slate-950 text-slate-50 p-4 rounded-md text-xs font-mono whitespace-pre-wrap overflow-auto h-[500px]">
-                            {JSON.stringify(raw, null, 2)}
-                        </div>
-                    </DialogContent>
-                </Dialog>
-            )
-        }
-    },
+    /*
+    // RAW JSON Column (Hidden or moved to actions)
+    */
     {
         accessorKey: "status",
         header: "Trạng thái",
