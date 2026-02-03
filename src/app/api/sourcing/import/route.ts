@@ -14,7 +14,6 @@ export async function POST(request: Request) {
         const body = await request.json()
         const { name, description, price, image, url, source, raw, variants, source_id } = body
         const userId = session.user.id
-        const userId = session.user.id
 
         // Prepare variants data
         let variantsCreateData: any[] = []
@@ -32,7 +31,7 @@ export async function POST(request: Request) {
         } else {
             // Default Variant
             variantsCreateData = [{
-                userId: session.user.id,
+                userId: userId,
                 name: "Default",
                 sku: `DRAFT-${Date.now()}-DEF`,
                 price: price || 0,
@@ -56,7 +55,7 @@ export async function POST(request: Request) {
         // Save to Database
         const product = await prisma.product.create({
             data: {
-                userId: session.user.id,
+                userId: userId,
                 name: name.substring(0, 100), // Limit length
                 description: description || `Imported from ${source}`,
                 images: image ? [image] : [],
