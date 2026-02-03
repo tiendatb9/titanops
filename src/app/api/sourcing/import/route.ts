@@ -34,33 +34,17 @@ export async function POST(request: Request) {
                 images: image ? [image] : [],
                 sku: `DRAFT-${Date.now()}`, // Auto-gen temp SKU
 
-                // Initial Variant (Default)
+                status: "DRAFT",
                 variants: {
                     create: {
+                        userId: session.user.id, // REQUIRED: Child must assume ownership
                         name: "Default",
                         sku: `DRAFT-${Date.now()}-DEF`,
                         price: price || 0,
-                        stock: 0
+                        stock: 0,
+                        status: "DRAFT"
                     }
                 },
-
-                // Mark as Draft
-                // status is not in schema yet? Let's check schema.
-                // Schema has NO status field in Product model? Let's checking schema...
-                // Ah, looking at schema.prisma provided earlier:
-                // model Product { ... variants Variant[] ... }
-                // model Listing { ... status String ... }
-                // Wait, Schema step 133 had `model Product`... let me double check my memory or schema file.
-                // It seems `status` might be missing on Product model in my previous `schema.prisma` write?
-                // Let's re-read schema.prisma to be safe. But I will assume I need to add it or it exists.
-                // In the Table component creation (step 194 schema.ts) I added `status`. 
-                // But did I add it to Prisma Schema?
-                // Re-reading Step 133 output... `model Product`... it does NOT have `status`.
-                // `Listing` has `status`.
-                // `Product` does not. 
-                // THIS IS A BUG/MISSING FEATURE IN MY SCHEMA PLAN vs UI.
-                // I should stick to the UI plan: Product needs a status (Draft/Active).
-                // I will add `status` field to Prisma schema in this turn as well.
             }
         })
 
