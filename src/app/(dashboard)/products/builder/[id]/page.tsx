@@ -10,7 +10,8 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
     const { id } = await params
 
-    // Fetch Product with Variants AND Listings to rebuild Channels
+    // Fetch Product with Children (Variants) AND Listings
+    // Note: 'variants' relation now points to 'Product' table with parentId
     const product = await prisma.product.findUnique({
         where: { id: id, userId: session.user.id },
         include: {
@@ -20,24 +21,37 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
                         include: { shop: true }
                     }
                 }
+            },
+            listings: { // Also fetch listings for Master Product
+                include: { shop: true }
             }
         }
     })
 
     if (!product) notFound()
 
-    // Transform Data to Form Schema
-    // We need to map DB structure back to Builder Form Structure
-    const defaultVariant = product.variants.find(v => v.name === "Default") || product.variants[0]
-    const otherVariants = product.variants.filter(v => v.name !== "Default")
-    const hasVariants = otherVariants.length > 0
+    // Transform Data
+    const children = product.variants // These are the Child Products
+    const hasVariants = children.length > 0
 
     // Extract Unique Channels (Shops) from Listings
-    // A product might have multiple variants linked to the same shop.
-    // We derive the "Product Level" link from the variants.
+    // We check both Master Listings and Child Listings
     const channelMap = new Map<string, { shopId: string, shopName: string, platform: any, platformItemId: string }>()
 
-    product.variants.forEach(v => {
+    // Check Master Listings
+    product.listings.forEach(l => {
+        if (!channelMap.has(l.shopId)) {
+            channelMap.set(l.shopId, {
+                shopId: l.shop.id,
+                shopName: l.shop.name,
+                platform: l.shop.platform,
+                platformItemId: l.platformItemId
+            })
+        }
+    })
+
+    // Check Child Listings
+    children.forEach(v => {
         v.listings.forEach(l => {
             if (!channelMap.has(l.shopId)) {
                 channelMap.set(l.shopId, {
@@ -61,7 +75,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     const initialData: ProductBuilderValues & { id: string } = {
         id: product.id,
         name: product.name,
-        sku: (hasVariants ? product.sku : (defaultVariant?.sku || product.sku)) || "",
+        sku: product.sku || "", // Master SKU
         description: product.description || "",
         descriptionHtml: product.descriptionHtml || "",
         syncDescription: true,
@@ -69,30 +83,30 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         categoryId: product.categoryId || "",
 
         // Spec placeholders
-        weight: 100,
+        weight: product.weight || 100,
         daysToShip: 2,
-        attributes: [],
+        attributes: [], // TODO: Load Attributes if stored
 
         hasVariants: hasVariants,
 
         // We won't try to reverse-engineer tiers yet, just load variants
         variationTiers: [],
 
-        variants: hasVariants ? product.variants.map(v => ({
+        variants: hasVariants ? children.map(v => ({
             id: v.id,
             name: v.name,
             sku: v.sku || "",
             price: Number(v.price),
             stock: v.stock,
-            image: v.image || "",
-            tierIndices: [], // We lost this context, fine for now
+            image: v.images[0] || "",
+            tierIndices: [], // Fine for now
             barcode: v.barcode || ""
         })) : [],
 
-        // Single Product Mode values
-        price: !hasVariants ? Number(defaultVariant?.price || 0) : 0,
-        stock: !hasVariants ? Number(defaultVariant?.stock || 0) : 0,
-        barcode: !hasVariants ? (defaultVariant?.barcode || "") : "",
+        // Single Product Mode values (Always populated from Master if no variants)
+        price: !hasVariants ? Number(product.price) : 0,
+        stock: !hasVariants ? product.stock : 0,
+        barcode: !hasVariants ? (product.barcode || "") : "",
 
         channels: channels
     }

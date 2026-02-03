@@ -113,72 +113,76 @@ model Shop {
   @@unique([platform, platformShopId]) // Một shop trên sàn chỉ link 1 lần (hoặc bỏ nếu cho phép trùng)
 }
 
+// Product is now the SINGLE source of truth for both Master Items and Variants
+// If parentId is NULL -> Master Product
+// If parentId is SET -> Variant (Child Product)
 model Product {
   id          String   @id @default(cuid())
   userId      String
   
+  // Recursive Relation (Parent - Child)
+  parentId    String?
+  parent      Product?  @relation("ProductVariants", fields: [parentId], references: [id], onDelete: Cascade)
+  variants    Product[] @relation("ProductVariants")
+
   name        String
   description     String?  @db.Text
-  descriptionHtml String?  @db.Text // HTML format for rich text editors
-  images      String[] // Array of URLs
+  descriptionHtml String?  @db.Text
+  images      String[] // Generic images
   
-  // Categorization
+  // Categorization (Usually on Parent)
   categoryId  String?
   brand       String?
   
-  // Master Status
-  sku         String?  // Master SKU (Optional container)
-  status      String   @default("DRAFT") // ACTIVE, DRAFT, ARCHIVED
-  rawJson     Json?    // Debugging: Store raw API response
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  variants    Variant[]
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Variant {
-  id          String   @id @default(cuid())
-  productId   String
-  
-  name        String   // Tên phân loại (vd: Xanh - L)
-  sku         String   // Master SKU (Quan trọng để map tồn kho)
+  // SKU & Inventory (Both Parent & Child have these)
+  sku         String?  // SKU is vital for both
   barcode     String?
+  status      String   @default("DRAFT") // ACTIVE, DRAFT, ARCHIVED
   
   price       Decimal  @default(0)
-  stock       Int      @default(0) // Master Stock (Tồn kho thực tế tại kho nhà)
+  stock       Int      @default(0)
   
-  image       String?
+  // Specs (Weight usually on Parent, but overrideable)
+  weight      Float?
+  width       Float?
+  height      Float?
+  depth       Float?
+
+  rawJson     Json?    // Debugging
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  listings    Listing[] // Các liên kết của biến thể này trên các sàn
   
-  @@unique([productId, sku]) // Trong 1 sản phẩm, SKU biến thể không trùng
+  listings    Listing[] // Linked to platforms
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, parentId])
+  @@index([sku])
 }
+// Variant Table REMOVED (Merged into Product)
 
 // Listing = Liên kết giữa Variant (Master) và Sản phẩm trên Sàn
 model Listing {
   id             String   @id @default(cuid())
   shopId         String
-  variantId      String?  // Có thể null nếu listing chưa map với Master Item nào
   
-  platformItemId String   // Item ID trên sàn (vd: Shopee Item ID)
+  // Link to Product (Parent or Child)
+  productId      String?
+  product        Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Platform Data
+  platformItemId String   // Item ID trên sàn
   platformSkuId  String?  // Model/Variation ID trên sàn
-  platformSku    String?  // SKU trên sàn (để so khớp)
+  platformSku    String?  // SKU trên sàn
   
-  syncedPrice    Decimal? // Giá đang để trên sàn
-  syncedStock    Int?     // Tồn kho đang để trên sàn
+  syncedPrice    Decimal?
+  syncedStock    Int?
   
-  status         String   // ACTIVE, INACTIVE, DELETED
-  syncStatus     String   // SYNCED, ERROR, PENDING
+  status         String   
+  syncStatus     String   
   lastSyncAt     DateTime?
-  
+
   shop           Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  variant        Variant? @relation(fields: [variantId], references: [id])
   
   @@index([shopId, platformItemId])
 }
