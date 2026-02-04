@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils"
 import { CategoryCascader } from "./category-cascader"
 import { BrandCombobox } from "./brand-combobox"
+import { BrandSyncButton } from "../shops/brand-sync-button"
 
 
 interface ProductEditorProps {
@@ -83,84 +84,36 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
         fetchCats()
     }, [shopId])
 
-    // Fetch Brands (Global & Caching) - Scan immediately when categoryId exists
+    // Fetch Brands (From Internal DB API)
     React.useEffect(() => {
-        if (!shopId || !formData.categoryId) return
+        if (!formData.categoryId) return
 
         let isCancelled = false
-        const CACHE_KEY = `titanops_brands_${shopId}_${formData.categoryId}`
+        setLoadingBrands(true)
 
-        async function scanBrands() {
-            // 1. Check Cache
-            const cached = localStorage.getItem(CACHE_KEY)
-            if (cached) {
-                try {
-                    const parsed = JSON.parse(cached)
-                    // Valid for 24 hours
-                    if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
-                        setBrands(parsed.data)
-                        setScanProgress("Đã tải từ Cache")
-                        return // Skip scanning
-                    }
-                } catch (e) { localStorage.removeItem(CACHE_KEY) }
-            }
-
-            // 2. Scan if no cache
-            setLoadingBrands(true)
-            let allBrands: any[] = []
-            let offset = 0
-            let hasMore = true
-            const pageSize = 100
-
+        // Use INTERNAL API for fast search
+        // We fetch top 50 initially? Or wait for search?
+        // Combobox handles search. But we need initial options.
+        // Let's fetch top 50 for this Category.
+        async function fetchBrands() {
             try {
-                // Using 500 pages limit (~50k brands) for safety
-                while (hasMore && !isCancelled && offset < 50000) {
-                    const res = await fetch(`/api/shops/${shopId}/brands?categoryId=${formData.categoryId}&offset=${offset}&pageSize=${pageSize}`)
-                    if (!res.ok) break
-
+                const res = await fetch(`/api/brands?categoryId=${formData.categoryId}`)
+                if (res.ok) {
                     const data = await res.json()
-                    const list = data.brand_list || []
-
-                    if (list.length > 0) {
-                        allBrands = [...allBrands, ...list]
-                        // Update UI every 500 items or so
-                        if (allBrands.length % 500 === 0 || !data.has_next_page) {
-                            setBrands(prev => [...prev, ...list])
-                            setScanProgress(`Đang quét... ${allBrands.length} thương hiệu`)
-                        } else {
-                            // Just update internal list, don't re-render excessively
-                        }
-                    }
-
-                    if (data.has_next_page) {
-                        offset = data.next_offset
-                        // Delay 300ms (Safe Mode)
-                        await new Promise(r => setTimeout(r, 300))
-                    } else {
-                        hasMore = false
-                    }
+                    setBrands(data)
+                    // If empty -> User might need to sync
+                    setScanProgress(data.length === 0 ? "Chưa có dữ liệu (Cần đồng bộ)" : "")
                 }
-
-                if (!isCancelled && allBrands.length > 0) {
-                    setBrands(allBrands) // Final update
-                    setScanProgress(`Hoàn tất (${allBrands.length})`)
-                    localStorage.setItem(CACHE_KEY, JSON.stringify({
-                        timestamp: Date.now(),
-                        data: allBrands
-                    }))
-                }
-            } catch (e) {
-                console.error("Scan Brands Error", e)
-            } finally {
-                setLoadingBrands(false)
-            }
+            } catch (e) { console.error(e) }
+            finally { setLoadingBrands(false) }
         }
 
-        setBrands([])
-        scanBrands()
-
+        fetchBrands()
         return () => { isCancelled = true }
-    }, [shopId, formData.categoryId])
+    }, [formData.categoryId])
+
+    // Remove legacy scanning logic...
+
 
     const handleSave = async () => {
         // TODO: Implement Save (Multiple APIs)
@@ -305,7 +258,7 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
                 {/* TAB 3: ATTRIBUTES */}
                 <TabsContent value="attributes" className="space-y-4">
                     <AttributeEditor
-                        shopId={shopId}
+                        shopId={shopId} // Pass down to Button
                         categoryId={formData.categoryId}
                         initialAttributes={product.rawJson?.attribute_list || []}
                         initialBrandId={rawItem.brand?.brand_id}
@@ -315,6 +268,16 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
                         brands={brands}
                         loadingBrands={loadingBrands}
                         scanProgress={scanProgress}
+                        // Pass reload function? Or just let it refetch?
+                        // If user syncs, we need to refresh list.
+                        onSyncSuccess={() => {
+                            // Quick hack: toggle categoryId to trigger useEffect? Or explicit reload.
+                            // Better: pass a reload trigger.
+                            // For now, reload page or re-select category.
+                            // Actually, let's just re-fetch.
+                            const event = new Event("brand-synced");
+                            window.dispatchEvent(event);
+                        }}
                     />
                 </TabsContent>
 
@@ -420,24 +383,29 @@ export function AttributeEditor({
             <CardContent className="space-y-4">
                 {/* BRAND FIELD (Searchable Combobox) */}
                 <div className="grid gap-2">
-                    <Label className="flex gap-1">
-                        Thương hiệu / Tác giả
-                        <span className="text-red-500">*</span>
-                    </Label>
+                    <div className="flex justify-between">
+                        <Label className="flex gap-1 items-center">
+                            Thương hiệu / Tác giả
+                            <span className="text-red-500">*</span>
+                        </Label>
+                        {/* Only show Sync Button if we have ShopID and CategoryID */}
+                        {shopId && categoryId && (
+                            <BrandSyncButton shopId={shopId} categoryId={categoryId} />
+                        )}
+                    </div>
 
                     <BrandCombobox
                         brands={brands}
                         value={selectedBrand}
                         onChange={(id) => handleBrandChange(String(id))}
                         loading={loadingBrands}
-                        placeholder={scanProgress || (loadingBrands ? "Đang quét..." : "Chọn thương hiệu")}
+                        placeholder={scanProgress || (loadingBrands ? "Đang tải DB..." : "Chọn thương hiệu")}
                     />
 
                     <div className="flex justify-between items-center mt-1">
                         <p className="text-[10px] text-muted-foreground">
-                            *Nhập tên để tìm kiếm.
+                            *Dữ liệu từ Database. Nếu thiếu, bấm "Đồng bộ Brand".
                         </p>
-                        {scanProgress && <span className="text-[10px] text-blue-600 font-medium">{scanProgress}</span>}
                     </div>
                 </div>
 
