@@ -66,10 +66,29 @@ export async function POST(
         let syncedCount = 0
 
         // 4. Upsert Products
-        for (const item of productDetails) {
-            const platformItemId = String(item.item_id)
+        // 4. Fetch Variants (Model List) for items that have them
+        const itemsWithModel = productDetails.filter((i: any) => i.has_model)
+        const modelMap: Record<number, any[]> = {}
 
-            // Parse Description
+        if (itemsWithModel.length > 0) {
+            console.log(`[Sync] Fetching models for ${itemsWithModel.length} items...`)
+            // Simple sequential batch to avoid rate limits (User suggested parallel limit, here we iterate)
+            // Ideally use Promise.all with concurrency limit.
+            for (const item of itemsWithModel) {
+                try {
+                    const modelRes = await ShopeeClient.getModelList(creds.accessToken, Number(creds.shopId), item.item_id)
+                    if (modelRes.response?.model) {
+                        modelMap[item.item_id] = modelRes.response.model
+                    }
+                } catch (e) {
+                    console.error(`Error fetching model for ${item.item_id}`, e)
+                }
+            }
+        }
+
+        // 5. Upsert Products (Flat Architecture)
+        for (const item of productDetails) {
+            // Common Fields
             let description = item.description
             if (item.description_type === 'extended' && item.description_info?.extended_description?.field_list) {
                 const fields = item.description_info.extended_description.field_list
@@ -77,75 +96,166 @@ export async function POST(
                     .filter((f: any) => f.field_type === 'text' && f.text)
                     .map((f: any) => f.text)
 
-                if (fieldTexts.length > 0) {
-                    description = fieldTexts.join('\n\n')
+                if (fieldTexts.length > 0) description = fieldTexts.join('\n\n')
+            }
+
+            const baseProductData = {
+                userId: shop.userId,
+                name: item.item_name,
+                description: description,
+                images: item.image?.image_url_list || [],
+                status: "ACTIVE",
+                source: shop.platform,
+                sourceId: String(item.item_id),
+                daysToShip: item.pre_order ? item.pre_order.days_to_ship : 2,
+                platformStatus: item.item_status || "NORMAL"
+            }
+
+            const hasModel = item.has_model && modelMap[item.item_id] && modelMap[item.item_id].length > 0
+
+            if (hasModel) {
+                // Case A: Has Variants -> Create 1 Product per Variant
+                const models = modelMap[item.item_id]
+                for (const model of models) {
+                    const modelSku = model.model_sku || `${item.item_sku || 'SHOPEE'}-${model.model_id}`
+                    const price = model.price_info?.[0]?.original_price || 0
+                    const stock = model.stock_info_v2?.summary_info?.total_available_stock || model.stock_info_v2?.seller_stock?.[0]?.stock || 0
+
+                    // Upsert Logic: Find existing Product by (userId + sourceId + sourceSkuId)
+                    // Wait, Schema has no unique on (sourceId, sourceSkuId). 
+                    // Best effort: Find by SKU if present, or create new.
+                    // Actually, we should link Listing first using platformItemId + platformSkuId
+
+                    // Find Listing
+                    const existingListing = await prisma.listing.findFirst({
+                        where: {
+                            shopId: shop.id,
+                            platformItemId: String(item.item_id),
+                            platformSkuId: String(model.model_id)
+                        },
+                        include: { product: true }
+                    })
+
+                    if (existingListing && existingListing.product) {
+                        // Update
+                        await prisma.product.update({
+                            where: { id: existingListing.product.id },
+                            data: {
+                                ...baseProductData,
+                                name: `${item.item_name} - ${model.model_name}`, // Flatten Name
+                                variantName: model.model_name,
+                                sku: modelSku,
+                                price: price,
+                                stock: stock,
+                                rawJson: { item, model } as any
+                            }
+                        })
+                        await prisma.listing.update({
+                            where: { id: existingListing.id },
+                            data: {
+                                syncStatus: 'SYNCED',
+                                lastSyncAt: new Date(),
+                                syncedStock: stock,
+                                syncedPrice: price
+                            }
+                        })
+                    } else {
+                        // Create New
+                        const product = await prisma.product.create({
+                            data: {
+                                ...baseProductData,
+                                name: `${item.item_name} - ${model.model_name}`,
+                                variantName: model.model_name,
+                                sku: modelSku,
+                                price: price,
+                                stock: stock,
+                                sourceSkuId: String(model.model_id),
+                                rawJson: { item, model } as any
+                            }
+                        })
+                        await prisma.listing.create({
+                            data: {
+                                shopId: shop.id,
+                                productId: product.id,
+                                platformItemId: String(item.item_id),
+                                platformSkuId: String(model.model_id), // Variant ID
+                                platformSku: modelSku,
+                                status: "ACTIVE",
+                                syncStatus: "LINKED",
+                                lastSyncAt: new Date(),
+                                syncedPrice: price,
+                                syncedStock: stock
+                            }
+                        })
+                    }
+                    syncedCount++
                 }
-            }
 
-            // Check if Listing exists first
-            const existingListing = await prisma.listing.findFirst({
-                where: {
-                    shopId: shop.id,
-                    platformItemId: platformItemId
-                },
-                include: { product: true } // product is now the relation (could be child or parent)
-            })
-
-            if (existingListing && existingListing.product) {
-                // UPDATE
-                await prisma.listing.update({
-                    where: { id: existingListing.id },
-                    data: {
-                        syncStatus: 'SYNCED',
-                        lastSyncAt: new Date(),
-                        syncedStock: item.stock_info_v2?.summary_info?.total_available_stock || item.stock_info_v2?.seller_stock?.[0]?.stock || 0,
-                    }
-                })
-
-                // Also update the Product rawJson
-                await prisma.product.update({
-                    where: { id: existingListing.product.id },
-                    data: { rawJson: item as any }
-                })
             } else {
-                // CREATE NEW: Parent Product -> Child Product -> Listing
-                // Assuming "Single Variant" mapping for now for simplicity,
-                // or if item has models, we should create multiple children.
-                // For MVP Sync, if no models, create 1 Default Child.
+                // Case B: No Variants (Single Item)
+                const platformItemId = String(item.item_id)
+                const sku = item.item_sku || `SHOPEE-${item.item_id}`
+                const price = item.price_info?.[0]?.original_price || 0
+                const stock = item.stock_info_v2?.summary_info?.total_available_stock || item.stock_info_v2?.seller_stock?.[0]?.stock || 0
 
-                // TODO: Handle item.has_model (Variations)
-
-                const product = await prisma.product.create({
-                    data: {
-                        userId: shop.userId,
-                        name: item.item_name,
-                        description: description,
-                        images: item.image?.image_url_list || [],
-                        sku: item.item_sku || `SHOPEE-${item.item_id}`,
-                        price: item.price_info?.[0]?.original_price || 0,
-                        stock: item.stock_info_v2?.summary_info?.total_available_stock || item.stock_info_v2?.seller_stock?.[0]?.stock || 0,
-                        status: "ACTIVE",
-                        source: shop.platform,
-                        sourceId: String(item.item_id),
-                        rawJson: item as any
-                    }
-                })
-
-                // Create Listing
-                await prisma.listing.create({
-                    data: {
+                // Find Listing
+                const existingListing = await prisma.listing.findFirst({
+                    where: {
                         shopId: shop.id,
-                        productId: product.id,
-                        platformItemId: String(item.item_id),
-                        status: "ACTIVE",
-                        syncStatus: "LINKED",
-                        lastSyncAt: new Date(),
-                        syncedPrice: item.price_info?.[0]?.original_price || 0,
-                        syncedStock: item.stock_info_v2?.summary_info?.total_available_stock || item.stock_info_v2?.seller_stock?.[0]?.stock || 0
-                    }
+                        platformItemId: platformItemId,
+                        platformSkuId: null // Single item has no sku_id/model_id usually? Or 0? Shopee uses 0 sometimes?
+                        // If has_model is false, listing usually doesn't have sku_id.
+                    },
+                    include: { product: true }
                 })
+
+                if (existingListing && existingListing.product) {
+                    await prisma.product.update({
+                        where: { id: existingListing.product.id },
+                        data: {
+                            ...baseProductData,
+                            sku: sku,
+                            price: price,
+                            stock: stock,
+                            rawJson: item as any
+                        }
+                    })
+                    await prisma.listing.update({
+                        where: { id: existingListing.id },
+                        data: {
+                            syncStatus: 'SYNCED',
+                            lastSyncAt: new Date(),
+                            syncedStock: stock,
+                            syncedPrice: price
+                        }
+                    })
+                } else {
+                    const product = await prisma.product.create({
+                        data: {
+                            ...baseProductData,
+                            sku: sku,
+                            price: price,
+                            stock: stock,
+                            sourceSkuId: null, // No variant ID
+                            rawJson: item as any
+                        }
+                    })
+                    await prisma.listing.create({
+                        data: {
+                            shopId: shop.id,
+                            productId: product.id,
+                            platformItemId: platformItemId,
+                            platformSkuId: null,
+                            status: "ACTIVE",
+                            syncStatus: "LINKED",
+                            lastSyncAt: new Date(),
+                            syncedPrice: price,
+                            syncedStock: stock
+                        }
+                    })
+                }
+                syncedCount++
             }
-            syncedCount++
         }
 
         return NextResponse.json({ success: true, count: syncedCount, message: "Sync successful" })
