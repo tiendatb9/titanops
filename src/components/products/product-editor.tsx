@@ -172,7 +172,7 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
                         <CardContent className="space-y-4">
                             {/* Image Grid */}
                             <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
-                                {formData.images.map((img, index) => (
+                                {formData.images.map((img: string, index: number) => (
                                     <div key={index} className="group relative aspect-square border rounded-md overflow-hidden bg-muted">
                                         <img src={img} alt={`Product ${index}`} className="w-full h-full object-cover" />
 
@@ -204,7 +204,7 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
                                     <div className="aspect-square border-2 border-dashed rounded-md flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 hover:border-blue-500 transition-colors"
                                         onClick={() => {
                                             const url = prompt("Nhập URL hình ảnh (Tính năng Upload đang xây dựng):")
-                                            if (url) setFormData(prev => ({ ...prev, images: [...prev.images, url] }))
+                                            if (url) setFormData((prev: any) => ({ ...prev, images: [...prev.images, url] }))
                                         }}
                                     >
                                         <Plus className="h-8 w-8 text-muted-foreground" />
@@ -216,13 +216,17 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
                     </Card>
                 </TabsContent>
 
-                {/* PLACEHOLDERS FOR OTHER TABS */}
-                <TabsContent value="attributes">
-                    <Card>
-                        <CardHeader><CardTitle>Thuộc tính ngành hàng</CardTitle></CardHeader>
-                        <CardContent><p className="text-muted-foreground">Đang phát triển...</p></CardContent>
-                    </Card>
+                {/* TAB 3: ATTRIBUTES */}
+                <TabsContent value="attributes" className="space-y-4">
+                    <AttributeEditor
+                        shopId={shopId}
+                        categoryId={formData.categoryId}
+                        initialAttributes={product.rawJson?.attribute_list || []}
+                        onChange={(attrs) => setFormData(prev => ({ ...prev, attributes: attrs }))}
+                    />
                 </TabsContent>
+
+                {/* PLACEHOLDERS FOR OTHER TABS */}
                 <TabsContent value="sales">
                     <Card>
                         <CardHeader><CardTitle>Thông tin Bán hàng</CardTitle></CardHeader>
@@ -237,5 +241,105 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
                 </TabsContent>
             </Tabs>
         </div>
+    )
+}
+
+// --- SUB COMPONENTS ---
+
+export function AttributeEditor({ shopId, categoryId, initialAttributes, onChange }: {
+    shopId?: string,
+    categoryId: number,
+    initialAttributes: any[],
+    onChange: (attrs: any[]) => void
+}) {
+    const [attributes, setAttributes] = React.useState<any[]>([])
+    const [values, setValues] = React.useState<Record<number, any>>({})
+    const [loading, setLoading] = React.useState(false)
+
+    // Load Attributes Structure
+    React.useEffect(() => {
+        if (!shopId || !categoryId) return
+
+        async function loadAttrs() {
+            setLoading(true)
+            try {
+                const res = await fetch(`/api/shops/${shopId}/attributes?categoryId=${categoryId}`)
+                if (res.ok) {
+                    const data = await res.json()
+                    setAttributes(data)
+                }
+            } catch (e) { console.error(e) }
+            finally { setLoading(false) }
+        }
+        loadAttrs()
+    }, [shopId, categoryId])
+
+    // Initial Values
+    React.useEffect(() => {
+        if (initialAttributes && initialAttributes.length > 0) {
+            const map: any = {}
+            initialAttributes.forEach(a => {
+                map[a.attribute_id] = a.attribute_value_list?.[0]?.value_id || a.attribute_value_list?.[0]?.original_value_name || ""
+            })
+            setValues(map)
+        }
+    }, [initialAttributes])
+
+    // Handle Change
+    const handleChange = (id: number, val: any) => {
+        const newValues = { ...values, [id]: val }
+        setValues(newValues)
+
+        // Convert to Shopee Format
+        const out = Object.entries(newValues).map(([k, v]) => ({
+            attribute_id: Number(k),
+            attribute_value_list: [{ original_value_name: String(v) }] // Simply sending value name for now
+        }))
+        onChange(out)
+    }
+
+    if (loading) return <div className="p-4 text-sm text-muted-foreground">Đang tải thuộc tính...</div>
+    if (attributes.length === 0) return <div className="p-4 text-sm text-muted-foreground">Danh mục này không có thuộc tính bắt buộc.</div>
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Thuộc tính sản phẩm ({attributes.length})</CardTitle>
+                <CardDescription>Điền đầy đủ các thuộc tính để tăng độ hiển thị.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {attributes.map(attr => (
+                    <div key={attr.attribute_id} className="grid gap-2">
+                        <Label className="flex gap-1">
+                            {attr.display_attribute_name}
+                            {attr.is_mandatory && <span className="text-red-500">*</span>}
+                        </Label>
+
+                        {/* RENDER INPUT BASED ON TYPE */}
+                        {attr.input_type === 'DROP_DOWN' || attr.input_type === 'COMBO_BOX' ? (
+                            <select
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                value={values[attr.attribute_id] || ""}
+                                onChange={(e) => handleChange(attr.attribute_id, e.target.value)}
+                            >
+                                <option value="">Chọn {attr.display_attribute_name}</option>
+                                {attr.attribute_value_list.map((v: any) => (
+                                    <option key={v.value_id} value={v.original_value_name || v.display_value_name}>
+                                        {v.display_value_name}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <Input
+                                value={values[attr.attribute_id] || ""}
+                                onChange={(e) => handleChange(attr.attribute_id, e.target.value)}
+                                placeholder={`Nhập ${attr.display_attribute_name}`}
+                            />
+                        )}
+
+                    </div>
+                ))}
+            </CardContent>
+        </Card>
     )
 }
