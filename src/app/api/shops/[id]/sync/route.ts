@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ShopeeClient } from "@/lib/shopee"
+import { ShopeeAuthService } from "@/lib/services/shopee-auth"
 import { NextResponse } from "next/server"
 
 export async function POST(
@@ -26,12 +27,22 @@ export async function POST(
         }
 
         const creds = shop.credentials as any
-        if (!creds.accessToken || !creds.shopId) {
-            return new NextResponse("Invalid Credentials. Please Re-authorize.", { status: 400 })
+        /*
+        if (!creds.accessToken || !creds.shopId) { // Credentials might be old structure
+            // But we use Service now.
+        }
+        */
+
+        // 2. Get Valid Access Token (Auto Refresh)
+        let accessToken = ""
+        try {
+            accessToken = await ShopeeAuthService.getValidAccessToken(shop.id)
+        } catch (e) {
+            return new NextResponse(`Authentication Error: ${(e as Error).message}. Please Re-connect Shop.`, { status: 401 })
         }
 
-        // 2. Fetch Item List (First 20 items for Basic Sync)
-        const listRes = await ShopeeClient.getItemList(creds.accessToken, Number(creds.shopId), 0, 20, "NORMAL")
+        // 3. Fetch Item List
+        const listRes = await ShopeeClient.getItemList(accessToken, Number(shop.platformShopId), 0, 20, "NORMAL")
 
         if (listRes.error) {
             return NextResponse.json({ success: false, error: listRes.message || "Shopee Error" }, { status: 500 })

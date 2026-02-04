@@ -100,6 +100,10 @@ model Shop {
   
   // Credentials (Token)
   credentials    Json?    // { access_token, refresh_token, shop_cipher... }
+
+  // Token Lifecycle Management
+  tokenExpiresAt DateTime? // Time when access_token expires
+  lastRefreshAt  DateTime? // Last successful refresh time
   
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())

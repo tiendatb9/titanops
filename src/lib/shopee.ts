@@ -93,6 +93,40 @@ export const ShopeeClient = {
     },
 
     /**
+     * Refresh Access Token
+     */
+    async refreshAccessToken(refreshToken: string, shopId: number) {
+        if (!PARTNER_ID || !PARTNER_KEY) throw new Error("Missing Shopee Config")
+
+        const path = "/api/v2/auth/access_token/get"
+        const timestamp = Math.floor(Date.now() / 1000)
+        const baseBody = {
+            refresh_token: refreshToken,
+            shop_id: shopId,
+            partner_id: Number(PARTNER_ID)
+        }
+
+        // Signature: partner_id + path + timestamp
+        const baseString = `${PARTNER_ID}${path}${timestamp}`
+        const sign = crypto.createHmac('sha256', PARTNER_KEY).update(baseString).digest('hex')
+
+        const url = `https://partner.shopeemobile.com${path}?partner_id=${PARTNER_ID}&timestamp=${timestamp}&sign=${sign}`
+
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(baseBody)
+        })
+
+        if (!res.ok) {
+            const err = await res.text()
+            throw new Error(`Shopee Refresh Error: ${err}`)
+        }
+
+        return res.json()
+    },
+
+    /**
      * Get Shop Info
      */
     async getShopInfo(accessToken: string, shopId: number) {
@@ -101,23 +135,15 @@ export const ShopeeClient = {
         const path = "/api/v2/shop/get_shop_info"
         const timestamp = Math.floor(Date.now() / 1000)
 
-        // V2 Public API request structure is generally generic
-        // But for shop info we need standard common params + access_token + shop_id in URL for signature?
-        // Actually get_shop_info is a "shop" level API.
-        // Sign: partner_id + path + timestamp + access_token + shop_id
-
         const baseString = `${PARTNER_ID}${path}${timestamp}${accessToken}${shopId}`
         const sign = crypto.createHmac('sha256', PARTNER_KEY).update(baseString).digest('hex')
 
         const url = `https://partner.shopeemobile.com${path}?partner_id=${PARTNER_ID}&timestamp=${timestamp}&access_token=${accessToken}&shop_id=${shopId}&sign=${sign}`
 
-        const res = await fetch(url, {
-            method: "GET"
-        })
+        const res = await fetch(url, { method: "GET" })
 
         if (!res.ok) {
             const err = await res.text()
-            // Don't throw, return null so we can fallback
             console.error("Shopee Shop Info Warning:", err)
             return null
         }
@@ -129,9 +155,9 @@ export const ShopeeClient = {
         }
         return json.response
     },
+
     /**
      * Get Item List
-     * https://open.shopee.com/documents/v2/product/get_item_list?module=89&type=1
      */
     async getItemList(accessToken: string, shopId: number, offset = 0, pageSize = 20, status = "NORMAL") {
         if (!PARTNER_ID || !PARTNER_KEY) throw new Error("Missing Shopee Config")
@@ -154,7 +180,6 @@ export const ShopeeClient = {
 
     /**
      * Get Item Base Info
-     * https://open.shopee.com/documents/v2/product/get_item_base_info?module=89&type=1
      */
     async getItemBaseInfo(accessToken: string, shopId: number, itemIdList: number[]) {
         if (!PARTNER_ID || !PARTNER_KEY) throw new Error("Missing Shopee Config")
@@ -162,23 +187,9 @@ export const ShopeeClient = {
         const path = "/api/v2/product/get_item_base_info"
         const timestamp = Math.floor(Date.now() / 1000)
 
-        // For GET with array params, we don't include them in baseString signature usually? 
-        // Wait, Shopee V2 GET params ARE included in signature if they are standard params.
-        // But for `item_id_list` it's tricky. 
-        // Official docs: "For GET request, all parameters in query string... sorted by ASCII..."
-        // Use standard URL construction to be safe?
-        // Actually, many wrapper libs use simple signature for common params.
-        // Let's verify signature rule. "partner_id + path + timestamp + access_token + shop_id".
-        // Shopee V2 signature logic is SPECIFIC to each API type?
-        // Most V2 APIs use: partner_id, path, timestamp, access_token, shop_id.
-        // The business params (like item_id_list) are often NOT in the signature base string for simplified V2.
-        // Let's trust the pattern used in `getShopInfo` (generic base string).
-
         const baseString = `${PARTNER_ID}${path}${timestamp}${accessToken}${shopId}`
         const sign = crypto.createHmac('sha256', PARTNER_KEY).update(baseString).digest('hex')
 
-        // Construct URL with item_id_list
-        // format: &item_id_list=123&item_id_list=456
         const urlObj = new URL(`https://partner.shopeemobile.com${path}`)
         urlObj.searchParams.append("partner_id", PARTNER_ID!)
         urlObj.searchParams.append("timestamp", timestamp.toString())
