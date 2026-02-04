@@ -120,24 +120,23 @@ model Product {
   id          String   @id @default(cuid())
   userId      String
   
-  // Recursive Relation (Parent - Child)
-  parentId    String?
-  parent      Product?  @relation("ProductVariants", fields: [parentId], references: [id], onDelete: Cascade)
-  variants    Product[] @relation("ProductVariants")
+  // Flat SKU Architecture (No Recursive Parent-Child)
+  // Each row is a unique SKU/Listing
 
   name        String
+  variantName String?  // Tên phân loại (vd: Màu Xanh, Size L)
   description     String?  @db.Text
   descriptionHtml String?  @db.Text
-  images      String[] // Generic images
+  images      String[] 
   
-  // Categorization (Usually on Parent)
+  // Categorization
   categoryId  String?
   brand       String?
   
-  // SKU & Inventory (Both Parent & Child have these)
-  sku         String?  // SKU is vital for both
+  // SKU & Inventory
+  sku         String?  // SKU cá nhân 
   barcode     String?
-  status      String   @default("DRAFT") // ACTIVE, DRAFT, ARCHIVED
+  status      String   @default("DRAFT")
   
   price       Decimal  @default(0)
   stock       Int      @default(0)
@@ -170,7 +169,7 @@ model Product {
   listings      Listing[] // Linked to platforms
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, parentId])
+  @@index([userId])
   @@index([sku])
 }
 // Variant Table REMOVED (Merged into Product)

@@ -67,6 +67,11 @@ export const columns: ColumnDef<Product>[] = [
                                 {product.name}
                             </a>
                         </div>
+                        {product.variantName && (
+                            <div className="text-xs font-semibold text-purple-600 mt-0.5">
+                                pl: {product.variantName}
+                            </div>
+                        )}
                         <div className="flex flex-col gap-0.5 mt-1">
                             <span className="text-[10px] text-muted-foreground">SKU: {product.sku}</span>
                             <div className="flex gap-1">
@@ -84,53 +89,29 @@ export const columns: ColumnDef<Product>[] = [
         },
     },
     {
-        accessorKey: "variants",
-        header: "Chi tiết biến thể (Model ID / Giá / Kho)",
+        accessorKey: "price",
+        header: "Giá bán",
         cell: ({ row }) => {
-            const variants = row.original.variants
+            const p = row.original
             return (
-                <div className="flex flex-col gap-2 text-sm min-w-[400px]">
-                    <div className="grid grid-cols-12 gap-2 font-medium text-xs text-muted-foreground border-b pb-1">
-                        <div className="col-span-4">Phân loại</div>
-                        <div className="col-span-3">Giá bán</div>
-                        <div className="col-span-2">Kho</div>
-                        <div className="col-span-3">Trạng thái</div>
-                    </div>
-                    {variants.map((v) => (
-                        <div key={v.id} className="grid grid-cols-12 gap-2 items-center border-b last:border-0 pb-1 last:pb-0 font-normal">
-                            <div className="col-span-4 flex flex-col">
-                                <span className="text-xs truncate font-medium" title={v.name}>{v.name}</span>
-                                <span className="text-[10px] text-muted-foreground truncate" title={v.sourceSkuId}>ID: {v.sourceSkuId || "-"}</span>
-                                <span className="text-[10px] text-muted-foreground truncate">{v.sku}</span>
-                            </div>
-                            <div className="col-span-3 flex flex-col justify-center">
-                                {v.originalPrice && v.originalPrice > v.price && (
-                                    <span className="text-[10px] text-muted-foreground line-through">
-                                        {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(v.originalPrice)}
-                                    </span>
-                                )}
-                                <span className="text-xs font-semibold text-red-600">
-                                    {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(v.price)}
-                                </span>
-                                {v.promoId && <span className="text-[9px] text-green-600">KM: {v.promoId}</span>}
-                            </div>
-                            <div className="col-span-2 text-xs">
-                                {v.stock}
-                            </div>
-                            <div className="col-span-3 flex flex-col">
-                                {v.status === 'NORMAL' ? (
-                                    <span className="text-[10px] text-green-600 bg-green-50 px-1 rounded w-fit">NORMAL</span>
-                                ) : v.status === 'BANNED' ? (
-                                    <span className="text-[10px] text-red-600 bg-red-50 px-1 rounded w-fit">BANNED</span>
-                                ) : (
-                                    <span className="text-[10px] text-gray-500">{v.status || "-"}</span>
-                                )}
-                            </div>
-                        </div>
-                    ))}
+                <div className="flex flex-col justify-center">
+                    {p.originalPrice && p.originalPrice > p.price && (
+                        <span className="text-[10px] text-muted-foreground line-through">
+                            {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(p.originalPrice)}
+                        </span>
+                    )}
+                    <span className="text-sm font-semibold text-red-600">
+                        {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(p.price)}
+                    </span>
+                    {p.promoId && <span className="text-[9px] text-green-600">KM: {p.promoId}</span>}
                 </div>
             )
         }
+    },
+    {
+        accessorKey: "stock",
+        header: "Kho",
+        cell: ({ row }) => <div className="font-medium">{row.original.stock}</div>
     },
     /*
     // RAW JSON Column (Hidden or moved to actions)

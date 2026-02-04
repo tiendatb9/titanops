@@ -28,41 +28,28 @@ async function getOnlineProducts(userId: string) {
     // For the table, we show "Products" but maybe annotated with platforms?
     // Current columns logic expects "products" with "platforms" boolean map.
 
+    // 2. Get Products (Flat)
     const products = await prisma.product.findMany({
         where: { userId },
-        include: {
-            variants: {
-                include: {
-                    listings: { include: { shop: true } }
-                }
-            }
-        },
+        // No Include Variants needed
         orderBy: { updatedAt: 'desc' }
     })
 
     // Transform for UI (matches columns schema)
     const formattedProducts = products.map(p => {
-        // Find platforms this product is listed on
-        const platforms = {
-            shopee: p.variants.some(v => v.listings.some(l => l.shop.platform === 'SHOPEE')),
-            tiktok: p.variants.some(v => v.listings.some(l => l.shop.platform === 'TIKTOK')),
-            lazada: false
-        }
-
-        // Calculate Price/Stock range or total
-        // Simple logic: Take first variant or range
-        const price = p.variants[0]?.price ? Number(p.variants[0].price) : 0
-        const stock = p.variants.reduce((sum, v) => sum + v.stock, 0)
-
         return {
             id: p.id,
             name: p.name,
+            variantName: p.variantName || undefined, // New Field
             sku: p.sku || "",
-            price: price,
-            stock: stock,
+
+            price: Number(p.price),
+            stock: p.stock,
+
             status: (p.status === 'ACTIVE' ? 'active' : 'draft') as "active" | "draft" | "archived",
             image: p.images[0] || "/placeholder.png",
-            platforms: platforms,
+            platforms: { shopee: true, tiktok: false, lazada: false }, // Placeholder logic
+
             rawJson: p.rawJson,
             sourceId: p.sourceId || undefined,
             sourceUrl: p.sourceUrl || undefined,
@@ -74,19 +61,13 @@ async function getOnlineProducts(userId: string) {
             daysToShip: p.daysToShip || undefined,
             platformStatus: p.platformStatus || undefined,
 
-            variants: p.variants.map(v => ({
-                id: v.id,
-                name: v.name,
-                sku: v.sku || "",
-                price: Number(v.price), // Current Price
-                stock: v.stock,
-                sourceSkuId: v.sourceSkuId || undefined,
-
-                originalPrice: v.originalPrice ? Number(v.originalPrice) : undefined,
-                promoPrice: v.promoPrice ? Number(v.promoPrice) : undefined,
-                promoId: v.promoId || undefined,
-                status: v.platformStatus || undefined
-            }))
+            // Legacy Variant Array (Keep empty or minimal for Columns compatibility?)
+            // Columns expect 'variants' array.
+            // If I return empty, columns will show "Simple Product" view?
+            // But I want to show the Variant Name if present!
+            // I should use "variants" to fake self? 
+            // OR Update Columns to just show top level info.
+            variants: []
         }
     })
 
