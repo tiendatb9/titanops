@@ -240,3 +240,18 @@ model OrderItem {
   
   order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
+
+model Brand {
+  id               Int      @id @default(autoincrement())
+  shopeeBrandId    BigInt   @unique
+  name             String
+  originalName     String?
+  displayBrandName String?
+  categoryId       BigInt?  
+  
+  updatedAt        DateTime @updatedAt
+  
+  @@index([categoryId])
+  @@index([name])
+  @@map("brands")
+}
