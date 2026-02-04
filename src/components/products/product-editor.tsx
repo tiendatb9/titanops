@@ -316,25 +316,43 @@ export function AttributeEditor({ shopId, categoryId, initialAttributes, onChang
                         </Label>
 
                         {/* RENDER INPUT BASED ON TYPE */}
-                        {attr.input_type === 'DROP_DOWN' || attr.input_type === 'COMBO_BOX' ? (
+                        {/* 
+                            input_type mapping:
+                            1: SINGLE_DROP_DOWN -> Select
+                            2: SINGLE_COMBO_BOX -> Select (with custom input support? for now Select)
+                            3: FREE_TEXT_FILED -> Input
+                            4: MULTI_DROP_DOWN -> Select Multiple (Not handled yet, treating as Single)
+                        */}
+                        {(attr.input_type == 1 || attr.input_type == 2 || attr.input_type == 'DROP_DOWN' || attr.input_type == 'COMBO_BOX') && attr.attribute_value_list.length > 0 ? (
                             <select
                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                 value={values[attr.attribute_id] || ""}
                                 onChange={(e) => handleChange(attr.attribute_id, e.target.value)}
                             >
-                                <option value="">Chọn {attr.display_attribute_name}</option>
+                                <option value="">-- Chọn {attr.display_attribute_name} --</option>
                                 {attr.attribute_value_list.map((v: any) => (
-                                    <option key={v.value_id} value={v.original_value_name || v.display_value_name}>
+                                    <option key={v.value_id} value={v.display_value_name}>
                                         {v.display_value_name}
                                     </option>
                                 ))}
                             </select>
-                        ) : (
+                        ) : attr.input_validation_type == 4 || attr.date_format_type ? (
+                            // Date Picker Type
                             <Input
+                                type="date"
                                 value={values[attr.attribute_id] || ""}
                                 onChange={(e) => handleChange(attr.attribute_id, e.target.value)}
-                                placeholder={`Nhập ${attr.display_attribute_name}`}
                             />
+                        ) : (
+                            // Text Input (Default)
+                            <div className="relative">
+                                <Input
+                                    value={values[attr.attribute_id] || ""}
+                                    onChange={(e) => handleChange(attr.attribute_id, e.target.value)}
+                                    placeholder={`Nhập ${attr.display_attribute_name}`}
+                                />
+                                {attr.attribute_unit && <span className="absolute right-3 top-2.5 text-xs text-muted-foreground">{attr.attribute_unit}</span>}
+                            </div>
                         )}
 
                     </div>
