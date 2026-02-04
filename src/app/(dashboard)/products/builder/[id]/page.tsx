@@ -1,3 +1,4 @@
+
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { redirect, notFound } from "next/navigation"
@@ -10,19 +11,11 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
     const { id } = await params
 
-    // Fetch Product with Children (Variants) AND Listings
-    // Note: 'variants' relation now points to 'Product' table with parentId
+    // Fetch Single Product (Flat) without variants relation
     const product = await prisma.product.findUnique({
         where: { id: id, userId: session.user.id },
         include: {
-            variants: {
-                include: {
-                    listings: {
-                        include: { shop: true }
-                    }
-                }
-            },
-            listings: { // Also fetch listings for Master Product
+            listings: {
                 include: { shop: true }
             }
         }
@@ -30,12 +23,11 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
     if (!product) notFound()
 
-    // Transform Data
-    const children = product.variants // These are the Child Products
-    const hasVariants = children.length > 0
+    // Flat Architecture: No children logic for now in this view
+    const children: any[] = []
+    const hasVariants = false
 
     // Extract Unique Channels (Shops) from Listings
-    // We check both Master Listings and Child Listings
     const channelMap = new Map<string, { shopId: string, shopName: string, platform: any, platformItemId: string }>()
 
     // Check Master Listings
@@ -50,20 +42,6 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         }
     })
 
-    // Check Child Listings
-    children.forEach(v => {
-        v.listings.forEach(l => {
-            if (!channelMap.has(l.shopId)) {
-                channelMap.set(l.shopId, {
-                    shopId: l.shop.id,
-                    shopName: l.shop.name,
-                    platform: l.shop.platform,
-                    platformItemId: l.platformItemId
-                })
-            }
-        })
-    })
-
     const channels = Array.from(channelMap.values()).map(c => ({
         shopId: c.shopId,
         shopName: c.shopName,
@@ -75,7 +53,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     const initialData: ProductBuilderValues & { id: string } = {
         id: product.id,
         name: product.name,
-        sku: product.sku || "", // Master SKU
+        sku: product.sku || "",
         description: product.description || "",
         descriptionHtml: product.descriptionHtml || "",
         syncDescription: true,
@@ -85,28 +63,18 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         // Spec placeholders
         weight: product.weight || 100,
         daysToShip: 2,
-        attributes: [], // TODO: Load Attributes if stored
+        attributes: [],
 
         hasVariants: hasVariants,
 
-        // We won't try to reverse-engineer tiers yet, just load variants
         variationTiers: [],
 
-        variants: hasVariants ? children.map(v => ({
-            id: v.id,
-            name: v.name,
-            sku: v.sku || "",
-            price: Number(v.price),
-            stock: v.stock,
-            image: v.images[0] || "",
-            tierIndices: [], // Fine for now
-            barcode: v.barcode || ""
-        })) : [],
+        variants: [],
 
-        // Single Product Mode values (Always populated from Master if no variants)
-        price: !hasVariants ? Number(product.price) : 0,
-        stock: !hasVariants ? product.stock : 0,
-        barcode: !hasVariants ? (product.barcode || "") : "",
+        // Single Product Mode values
+        price: Number(product.price),
+        stock: product.stock,
+        barcode: product.barcode || "",
 
         channels: channels
     }
