@@ -9,8 +9,11 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
-import { RefreshCw, Save, ChevronLeft } from "lucide-react"
+import { RefreshCw, Save, ChevronLeft, Check, ChevronsUpDown } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 
 interface ProductEditorProps {
     product: any
@@ -49,6 +52,7 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
     // State for Categories
     const [categories, setCategories] = React.useState<any[]>([])
     const [loadingCats, setLoadingCats] = React.useState(false)
+    const [openCat, setOpenCat] = React.useState(false)
 
     // Fetch Categories if ShopId present
     React.useEffect(() => {
@@ -123,28 +127,54 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
 
                             <div className="grid gap-2">
                                 <Label>Danh mục Shopee</Label>
-                                <div className="flex gap-2">
-                                    <div className="flex-1 p-2 border rounded-md bg-muted/50 text-sm flex items-center justify-between">
-                                        <span>{categoryName}</span>
-                                        <span className="text-xs text-muted-foreground">{formData.categoryId}</span>
-                                    </div>
-                                    {/* Temporary Simple Selector - ideally a TreeSelect */}
-                                    <select
-                                        className="h-10 w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                        value={formData.categoryId || ""}
-                                        onChange={(e) => setFormData({ ...formData, categoryId: Number(e.target.value) })}
-                                    >
-                                        <option value="">Chọn danh mục...</option>
-                                        {categories.filter(c => !c.has_children).map(c => (
-                                            <option key={c.category_id} value={c.category_id}>
-                                                {c.display_category_name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                <div className="flex flex-col gap-2">
+                                    <Popover open={openCat} onOpenChange={setOpenCat}>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                role="combobox"
+                                                aria-expanded={openCat}
+                                                className="w-full justify-between"
+                                            >
+                                                {categoryName !== "Chưa chọn danh mục" ? categoryName : "Chọn danh mục..."}
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-[400px] p-0" align="start">
+                                            <Command>
+                                                <CommandInput placeholder="Tìm kiếm danh mục..." />
+                                                <CommandList>
+                                                    <CommandEmpty>Không tìm thấy danh mục.</CommandEmpty>
+                                                    <CommandGroup>
+                                                        {categories
+                                                            .filter(c => !c.has_children)
+                                                            .map((category) => (
+                                                                <CommandItem
+                                                                    key={category.category_id}
+                                                                    value={category.display_category_name}
+                                                                    onSelect={() => {
+                                                                        setFormData(prev => ({ ...prev, categoryId: category.category_id }))
+                                                                        setOpenCat(false)
+                                                                    }}
+                                                                >
+                                                                    <Check
+                                                                        className={cn(
+                                                                            "mr-2 h-4 w-4",
+                                                                            formData.categoryId === category.category_id ? "opacity-100" : "opacity-0"
+                                                                        )}
+                                                                    />
+                                                                    {category.display_category_name}
+                                                                </CommandItem>
+                                                            ))}
+                                                    </CommandGroup>
+                                                </CommandList>
+                                            </Command>
+                                        </PopoverContent>
+                                    </Popover>
+                                    <p className="text-[11px] text-muted-foreground">
+                                        *Chỉ hiển thị {categories.filter(c => !c.has_children).length} danh mục lá (Leaf Category) để chọn.
+                                    </p>
                                 </div>
-                                <p className="text-[11px] text-muted-foreground">
-                                    *Chỉ hiển thị danh mục lá (Leaf Category). Hiện tại đang load {categories.length} danh mục.
-                                </p>
                             </div>
 
                             <div className="grid gap-2">

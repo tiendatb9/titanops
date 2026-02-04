@@ -20,19 +20,24 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
         // 1. Get Access Token
         const accessToken = await ShopeeAuthService.getValidAccessToken(shop.id)
+        console.log(`[Categories_GET] Shop: ${shop.id}, PlatformShopId: ${shop.platformShopId}, Token: ${accessToken.slice(0, 10)}...`)
 
         // 2. Fetch Categories
         const res = await ShopeeClient.getCategory(accessToken, Number(shop.platformShopId))
+
+        console.log(`[Categories_GET] Shopee API Response Status: ${res.error ? 'Error' : 'Success'}, Msg: ${res.message}`)
 
         if (res.error) {
             return new NextResponse(`Shopee Error: ${res.error} - ${res.message}`, { status: 500 })
         }
 
         const list = res.response?.category_list || []
+        console.log(`[Categories_GET] Found ${list.length} categories`)
+
         return NextResponse.json(list)
 
-    } catch (error) {
-        console.error("[Categories_GET]", error)
-        return new NextResponse("Internal Error", { status: 500 })
+    } catch (error: any) {
+        console.error("[Categories_GET] Exception:", error)
+        return new NextResponse(`Internal Error: ${error.message}`, { status: 500 })
     }
 }
