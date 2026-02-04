@@ -322,7 +322,10 @@ export default function ShopsPage() {
 
             <ShopModal
                 open={open}
-                onOpenChange={(v) => { if (!setOpen(v)) fetchShops() }}
+                onOpenChange={(v) => {
+                    setOpen(v)
+                    if (!v) fetchShops()
+                }}
             />
 
             <ShopSettingsDialog
