@@ -222,7 +222,9 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
                         shopId={shopId}
                         categoryId={formData.categoryId}
                         initialAttributes={product.rawJson?.attribute_list || []}
+                        initialBrandId={rawItem.brand?.brand_id}
                         onChange={(attrs) => setFormData(prev => ({ ...prev, attributes: attrs }))}
+                        onBrandChange={(brandId) => setFormData(prev => ({ ...prev, brandId: brandId }))}
                     />
                 </TabsContent>
 
@@ -246,33 +248,50 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
 
 // --- SUB COMPONENTS ---
 
-export function AttributeEditor({ shopId, categoryId, initialAttributes, onChange }: {
+export function AttributeEditor({ shopId, categoryId, initialAttributes, initialBrandId, onChange, onBrandChange }: {
     shopId?: string,
     categoryId: number,
     initialAttributes: any[],
+    initialBrandId?: number,
     onChange: (attrs: any[]) => void
+    onBrandChange?: (brandId: number) => void
 }) {
     const [attributes, setAttributes] = React.useState<any[]>([])
+    const [brands, setBrands] = React.useState<any[]>([])
     const [values, setValues] = React.useState<Record<number, any>>({})
+    const [selectedBrand, setSelectedBrand] = React.useState<number | null>(initialBrandId || null)
+
     const [loading, setLoading] = React.useState(false)
 
-    // Load Attributes Structure
+    // Load Attributes & Brands
     React.useEffect(() => {
         if (!shopId || !categoryId) return
 
-        async function loadAttrs() {
+        async function loadData() {
             setLoading(true)
             try {
-                const res = await fetch(`/api/shops/${shopId}/attributes?categoryId=${categoryId}`)
-                if (res.ok) {
-                    const data = await res.json()
-                    setAttributes(data)
-                }
+                // Parallel Fetch
+                const [attrRes, brandRes] = await Promise.all([
+                    fetch(`/api/shops/${shopId}/attributes?categoryId=${categoryId}`),
+                    fetch(`/api/shops/${shopId}/brands?categoryId=${categoryId}`)
+                ])
+
+                if (attrRes.ok) setAttributes(await attrRes.json())
+                if (brandRes.ok) setBrands(await brandRes.json())
+
             } catch (e) { console.error(e) }
             finally { setLoading(false) }
         }
-        loadAttrs()
+        loadData()
     }, [shopId, categoryId])
+
+    // Handle Brand Change
+    const handleBrandChange = (val: string) => {
+        const id = Number(val)
+        setSelectedBrand(id)
+        if (onBrandChange) onBrandChange(id)
+    }
+
 
     // Initial Values
     React.useEffect(() => {
@@ -308,6 +327,31 @@ export function AttributeEditor({ shopId, categoryId, initialAttributes, onChang
                 <CardDescription>Điền đầy đủ các thuộc tính để tăng độ hiển thị.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+                {/* BRAND FIELD (ALWAYS FIRST) */}
+                <div className="grid gap-2">
+                    <Label className="flex gap-1">
+                        Thương hiệu / Tác giả
+                        <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="relative">
+                        <select
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={selectedBrand || ""}
+                            onChange={(e) => handleBrandChange(e.target.value)}
+                        >
+                            <option value="0">No Brand / Không có thương hiệu</option>
+                            {brands.map((b: any) => (
+                                <option key={b.brand_id} value={b.brand_id}>
+                                    {b.display_brand_name} {b.original_brand_name !== b.display_brand_name ? `(${b.original_brand_name})` : ''}
+                                </option>
+                            ))}
+                        </select>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                            *Chọn "No Brand" nếu không tìm thấy tác giả.
+                        </p>
+                    </div>
+                </div>
+
                 {attributes.map(attr => (
                     <div key={attr.attribute_id} className="grid gap-2">
                         <Label className="flex gap-1">
