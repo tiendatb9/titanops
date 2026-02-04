@@ -284,7 +284,7 @@ export default function ShopsPage() {
     }
 
     return (
-        <div className="h-full flex-1 flex-col space-y-8 p-8 flex max-w-[1600px] mx-auto bg-muted/10">
+        <div className="h-full flex-1 flex-col space-y-8 p-8 flex w-full bg-muted/10">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
