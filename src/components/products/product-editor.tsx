@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
-import { RefreshCw, Save, ChevronLeft, Check, ChevronsUpDown } from "lucide-react"
+import { RefreshCw, Save, ChevronLeft, Check, ChevronsUpDown, X, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -155,36 +155,89 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
                                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                 />
                             </div>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
+                            {/* TAB 2: MEDIA */}
+                            <TabsContent value="media" className="space-y-4">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Hình ảnh sản phẩm</CardTitle>
+                                        <CardDescription>
+                                            Quản lý hình ảnh hiển thị trên Shopee. Tối đa 9 ảnh.
+                                            Kéo thả để sắp xếp (Tính năng sắp xếp đang cập nhật).
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        {/* Image Grid */}
+                                        <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
+                                            {formData.images.map((img, index) => (
+                                                <div key={index} className="group relative aspect-square border rounded-md overflow-hidden bg-muted">
+                                                    <img src={img} alt={`Product ${index}`} className="w-full h-full object-cover" />
 
-                {/* PLACEHOLDERS FOR OTHER TABS */}
-                <TabsContent value="media">
-                    <Card>
-                        <CardHeader><CardTitle>Quản lý Media</CardTitle></CardHeader>
-                        <CardContent><p className="text-muted-foreground">Đang phát triển...</p></CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="attributes">
-                    <Card>
-                        <CardHeader><CardTitle>Thuộc tính ngành hàng</CardTitle></CardHeader>
-                        <CardContent><p className="text-muted-foreground">Đang phát triển...</p></CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="sales">
-                    <Card>
-                        <CardHeader><CardTitle>Thông tin Bán hàng</CardTitle></CardHeader>
-                        <CardContent><p className="text-muted-foreground">Đang phát triển...</p></CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="logistic">
-                    <Card>
-                        <CardHeader><CardTitle>Vận chuyển</CardTitle></CardHeader>
-                        <CardContent><p className="text-muted-foreground">Đang phát triển...</p></CardContent>
-                    </Card>
-                </TabsContent>
-            </Tabs>
-        </div>
-    )
+                                                    {/* Actions Overlay */}
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                        <Button
+                                                            variant="destructive" size="icon" className="h-8 w-8"
+                                                            onClick={() => {
+                                                                const newImages = [...formData.images]
+                                                                newImages.splice(index, 1)
+                                                                setFormData({ ...formData, images: newImages })
+                                                            }}
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+
+                                                    {/* Badges */}
+                                                    {index === 0 && (
+                                                        <div className="absolute top-1 left-1 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded shadow">
+                                                            Ảnh bìa
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+
+                                            {/* Add Button */}
+                                            {formData.images.length < 9 && (
+                                                <div className="aspect-square border-2 border-dashed rounded-md flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 hover:border-blue-500 transition-colors"
+                                                    onClick={() => {
+                                                        const url = prompt("Nhập URL hình ảnh (Tính năng Upload đang xây dựng):")
+                                                        if (url) setFormData(prev => ({ ...prev, images: [...prev.images, url] }))
+                                                    }}
+                                                >
+                                                    <Plus className="h-8 w-8 text-muted-foreground" />
+                                                    <span className="text-xs text-muted-foreground mt-2">Thêm ảnh</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+
+                            {/* PLACEHOLDERS FOR OTHER TABS */}
+                            <TabsContent value="media">
+                                <Card>
+                                    <CardHeader><CardTitle>Quản lý Media</CardTitle></CardHeader>
+                                    <CardContent><p className="text-muted-foreground">Đang phát triển...</p></CardContent>
+                                </Card>
+                            </TabsContent>
+                            <TabsContent value="attributes">
+                                <Card>
+                                    <CardHeader><CardTitle>Thuộc tính ngành hàng</CardTitle></CardHeader>
+                                    <CardContent><p className="text-muted-foreground">Đang phát triển...</p></CardContent>
+                                </Card>
+                            </TabsContent>
+                            <TabsContent value="sales">
+                                <Card>
+                                    <CardHeader><CardTitle>Thông tin Bán hàng</CardTitle></CardHeader>
+                                    <CardContent><p className="text-muted-foreground">Đang phát triển...</p></CardContent>
+                                </Card>
+                            </TabsContent>
+                            <TabsContent value="logistic">
+                                <Card>
+                                    <CardHeader><CardTitle>Vận chuyển</CardTitle></CardHeader>
+                                    <CardContent><p className="text-muted-foreground">Đang phát triển...</p></CardContent>
+                                </Card>
+                            </TabsContent>
+                        </Tabs>
+                    </div>
+                    )
 }
