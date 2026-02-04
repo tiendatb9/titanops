@@ -19,11 +19,12 @@ export const ShopeeAuthService = {
 
         // Check Expiry (Handle both camelCase and snake_case)
         const expireIn = creds.expireIn || creds.expire_in
-        const updatedAt = creds.updatedAt || creds.updated_at
+        const updatedAt = creds.updatedAt || creds.updated_at || 0 // Default to 0 (1970) to force refresh if missing
 
-        const expiresAt = shop.tokenExpiresAt || (expireIn ? new Date((updatedAt || Date.now()) + expireIn * 1000) : null)
+        const expiresAt = shop.tokenExpiresAt || (expireIn ? new Date(updatedAt + expireIn * 1000) : null)
 
         // If we don't know expiry, or it's past/soon, refresh it.
+        // Also if updatedAt was 0, expiresAt is 1970, which is < now minus 5 mins.
         const isExpiring = !expiresAt || (expiresAt.getTime() - now.getTime() < 5 * 60 * 1000)
 
         if (isExpiring) {
