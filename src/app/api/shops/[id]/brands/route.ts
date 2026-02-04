@@ -44,6 +44,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             }
 
             const list = res.response?.brand_list || []
+
+            // Log progress
+            console.log(`[Brands_Fetch] Page ${pageCount + 1}, Items: ${list.length}, NextOffset: ${res.response?.next_offset}, HasNext: ${res.response?.has_next_page}`)
+
             allBrands = [...allBrands, ...list]
 
             hasNextPage = res.response?.has_next_page
@@ -54,6 +58,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             // await new Promise(r => setTimeout(r, 100))
         }
 
+        console.log(`[Brands_Total] Fetched ${allBrands.length} brands in ${pageCount} pages.`)
         return NextResponse.json(allBrands)
 
     } catch (error: any) {

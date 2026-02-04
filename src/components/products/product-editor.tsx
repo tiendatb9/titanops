@@ -265,26 +265,32 @@ export function AttributeEditor({ shopId, categoryId, initialAttributes, initial
 
     const [loading, setLoading] = React.useState(false)
 
-    // Load Attributes & Brands
+    // Load Attributes
     React.useEffect(() => {
         if (!shopId || !categoryId) return
 
-        async function loadData() {
-            setLoading(true)
+        async function loadAttrs() {
+            setLoading(true) // Only block for attributes
             try {
-                // Parallel Fetch
-                const [attrRes, brandRes] = await Promise.all([
-                    fetch(`/api/shops/${shopId}/attributes?categoryId=${categoryId}`),
-                    fetch(`/api/shops/${shopId}/brands?categoryId=${categoryId}`)
-                ])
-
-                if (attrRes.ok) setAttributes(await attrRes.json())
-                if (brandRes.ok) setBrands(await brandRes.json())
-
-            } catch (e) { console.error(e) }
+                const res = await fetch(`/api/shops/${shopId}/attributes?categoryId=${categoryId}`)
+                if (res.ok) setAttributes(await res.json())
+            } catch (e) { console.error("Load Attrs Error", e) }
             finally { setLoading(false) }
         }
-        loadData()
+        loadAttrs()
+    }, [shopId, categoryId])
+
+    // Load Brands (Background)
+    React.useEffect(() => {
+        if (!shopId || !categoryId) return
+
+        async function loadBrands() {
+            try {
+                const res = await fetch(`/api/shops/${shopId}/brands?categoryId=${categoryId}`)
+                if (res.ok) setBrands(await res.json())
+            } catch (e) { console.error("Load Brands Error", e) }
+        }
+        loadBrands()
     }, [shopId, categoryId])
 
     // Handle Brand Change
