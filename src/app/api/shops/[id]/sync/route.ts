@@ -98,43 +98,39 @@ export async function POST(
                 })
             } else {
                 // CREATE NEW: Parent Product -> Child Product -> Listing
-                // Assuming "Single Variant" mapping for now for simplicity, 
+                // Assuming "Single Variant" mapping for now for simplicity,
                 // or if item has models, we should create multiple children.
                 // For MVP Sync, if no models, create 1 Default Child.
 
                 // TODO: Handle item.has_model (Variations)
 
-                const newParent = await prisma.product.create({
+                const product = await prisma.product.create({
                     data: {
-                        userId: session.user.id,
+                        userId: shop.userId,
                         name: item.item_name,
                         description: description,
-                        brand: item.brand?.original_brand_name || item.brand?.brand_name,
                         images: item.image?.image_url_list || [],
                         sku: item.item_sku || `SHOPEE-${item.item_id}`,
-                        status: 'ACTIVE',
-                        rawJson: item as any,
-                        variants: {
-                            create: {
-                                userId: session.user.id,
-                                name: "Default",
-                                sku: item.item_sku || `SHOPEE-${item.item_id}-DEF`,
-                                price: item.price_info?.[0]?.original_price || 0,
-                                stock: item.stock_info_v2?.summary_info?.total_available_stock || item.stock_info_v2?.seller_stock?.[0]?.stock || 0,
-                                status: 'ACTIVE',
-                                listings: {
-                                    create: {
-                                        shopId: shop.id,
-                                        platformItemId: platformItemId,
-                                        status: 'ACTIVE',
-                                        syncStatus: 'SYNCED',
-                                        lastSyncAt: new Date(),
-                                        syncedPrice: item.price_info?.[0]?.original_price || 0,
-                                        syncedStock: item.stock_info_v2?.summary_info?.total_available_stock || item.stock_info_v2?.seller_stock?.[0]?.stock || 0
-                                    }
-                                }
-                            }
-                        }
+                        price: item.price_info?.[0]?.original_price || 0,
+                        stock: item.stock_info_v2?.summary_info?.total_available_stock || item.stock_info_v2?.seller_stock?.[0]?.stock || 0,
+                        status: "ACTIVE",
+                        source: shop.platform,
+                        sourceId: String(item.item_id),
+                        rawJson: item as any
+                    }
+                })
+
+                // Create Listing
+                await prisma.listing.create({
+                    data: {
+                        shopId: shop.id,
+                        productId: product.id,
+                        platformItemId: String(item.item_id),
+                        status: "ACTIVE",
+                        syncStatus: "LINKED",
+                        lastSyncAt: new Date(),
+                        syncedPrice: item.price_info?.[0]?.original_price || 0,
+                        syncedStock: item.stock_info_v2?.summary_info?.total_available_stock || item.stock_info_v2?.seller_stock?.[0]?.stock || 0
                     }
                 })
             }
