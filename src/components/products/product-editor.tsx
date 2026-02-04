@@ -46,10 +46,39 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
     }, [rawItem, product])
 
 
+    // State for Categories
+    const [categories, setCategories] = React.useState<any[]>([])
+    const [loadingCats, setLoadingCats] = React.useState(false)
+
+    // Fetch Categories if ShopId present
+    React.useEffect(() => {
+        if (!shopId) return
+
+        async function fetchCats() {
+            setLoadingCats(true)
+            try {
+                const res = await fetch(`/api/shops/${shopId}/categories`)
+                if (res.ok) {
+                    const data = await res.json()
+                    setCategories(data)
+                }
+            } catch (e) {
+                console.error("Failed to load categories", e)
+            } finally {
+                setLoadingCats(false)
+            }
+        }
+        fetchCats()
+    }, [shopId])
+
     const handleSave = async () => {
         // TODO: Implement Save (Multiple APIs)
         alert("Tính năng đang phát triển...")
     }
+
+    // Helper to find selected category name
+    const selectedCat = categories.find(c => c.category_id === formData.categoryId)
+    const categoryName = selectedCat ? selectedCat.display_category_name : (formData.categoryId ? `ID: ${formData.categoryId}` : "Chưa chọn danh mục")
 
     return (
         <div className="space-y-6">
@@ -91,6 +120,33 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
                                     onChange={(e) => setFormData({ ...formData, itemName: e.target.value })}
                                 />
                             </div>
+
+                            <div className="grid gap-2">
+                                <Label>Danh mục Shopee</Label>
+                                <div className="flex gap-2">
+                                    <div className="flex-1 p-2 border rounded-md bg-muted/50 text-sm flex items-center justify-between">
+                                        <span>{categoryName}</span>
+                                        <span className="text-xs text-muted-foreground">{formData.categoryId}</span>
+                                    </div>
+                                    {/* Temporary Simple Selector - ideally a TreeSelect */}
+                                    <select
+                                        className="h-10 w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        value={formData.categoryId || ""}
+                                        onChange={(e) => setFormData({ ...formData, categoryId: Number(e.target.value) })}
+                                    >
+                                        <option value="">Chọn danh mục...</option>
+                                        {categories.filter(c => !c.has_children).map(c => (
+                                            <option key={c.category_id} value={c.category_id}>
+                                                {c.display_category_name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <p className="text-[11px] text-muted-foreground">
+                                    *Chỉ hiển thị danh mục lá (Leaf Category). Hiện tại đang load {categories.length} danh mục.
+                                </p>
+                            </div>
+
                             <div className="grid gap-2">
                                 <Label htmlFor="sku">SKU (Mã phân loại)</Label>
                                 <Input
