@@ -374,18 +374,7 @@ export function AttributeEditor({
         loadAttrs()
     }, [shopId, categoryId])
 
-    // Load Brands (Background)
-    React.useEffect(() => {
-        if (!shopId || !categoryId) return
 
-        async function loadBrands() {
-            try {
-                const res = await fetch(`/api/shops/${shopId}/brands?categoryId=${categoryId}`)
-                if (res.ok) setBrands(await res.json())
-            } catch (e) { console.error("Load Brands Error", e) }
-        }
-        loadBrands()
-    }, [shopId, categoryId])
 
     // Handle Brand Change
     const handleBrandChange = (val: string) => {
