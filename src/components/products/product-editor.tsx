@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+import { CategoryCascader } from "./category-cascader"
 
 interface ProductEditorProps {
     product: any
@@ -127,54 +128,14 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
 
                             <div className="grid gap-2">
                                 <Label>Danh mục Shopee</Label>
-                                <div className="flex flex-col gap-2">
-                                    <Popover open={openCat} onOpenChange={setOpenCat}>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                role="combobox"
-                                                aria-expanded={openCat}
-                                                className="w-full justify-between"
-                                            >
-                                                {categoryName !== "Chưa chọn danh mục" ? categoryName : "Chọn danh mục..."}
-                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-[400px] p-0" align="start">
-                                            <Command>
-                                                <CommandInput placeholder="Tìm kiếm danh mục..." />
-                                                <CommandList>
-                                                    <CommandEmpty>Không tìm thấy danh mục.</CommandEmpty>
-                                                    <CommandGroup>
-                                                        {categories
-                                                            .filter(c => !c.has_children)
-                                                            .map((category) => (
-                                                                <CommandItem
-                                                                    key={category.category_id}
-                                                                    value={category.display_category_name}
-                                                                    onSelect={() => {
-                                                                        setFormData(prev => ({ ...prev, categoryId: category.category_id }))
-                                                                        setOpenCat(false)
-                                                                    }}
-                                                                >
-                                                                    <Check
-                                                                        className={cn(
-                                                                            "mr-2 h-4 w-4",
-                                                                            formData.categoryId === category.category_id ? "opacity-100" : "opacity-0"
-                                                                        )}
-                                                                    />
-                                                                    {category.display_category_name}
-                                                                </CommandItem>
-                                                            ))}
-                                                    </CommandGroup>
-                                                </CommandList>
-                                            </Command>
-                                        </PopoverContent>
-                                    </Popover>
-                                    <p className="text-[11px] text-muted-foreground">
-                                        *Chỉ hiển thị {categories.filter(c => !c.has_children).length} danh mục lá (Leaf Category) để chọn.
-                                    </p>
-                                </div>
+                                <CategoryCascader
+                                    categories={categories}
+                                    value={formData.categoryId || 0}
+                                    onSelect={(id) => setFormData(prev => ({ ...prev, categoryId: id }))}
+                                />
+                                <p className="text-[11px] text-muted-foreground">
+                                    *Chọn đúng danh mục để hiển thị đúng thuộc tính sản phẩm.
+                                </p>
                             </div>
 
                             <div className="grid gap-2">
