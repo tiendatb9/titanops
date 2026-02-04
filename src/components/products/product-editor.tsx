@@ -57,6 +57,11 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
     const [loadingCats, setLoadingCats] = React.useState(false)
     const [openCat, setOpenCat] = React.useState(false)
 
+    // State for Brands (Lifted)
+    const [brands, setBrands] = React.useState<any[]>([])
+    const [scanProgress, setScanProgress] = React.useState("")
+    const [loadingBrands, setLoadingBrands] = React.useState(false)
+
     // Fetch Categories if ShopId present
     React.useEffect(() => {
         if (!shopId) return
@@ -77,6 +82,85 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
         }
         fetchCats()
     }, [shopId])
+
+    // Fetch Brands (Global & Caching) - Scan immediately when categoryId exists
+    React.useEffect(() => {
+        if (!shopId || !formData.categoryId) return
+
+        let isCancelled = false
+        const CACHE_KEY = `titanops_brands_${shopId}_${formData.categoryId}`
+
+        async function scanBrands() {
+            // 1. Check Cache
+            const cached = localStorage.getItem(CACHE_KEY)
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached)
+                    // Valid for 24 hours
+                    if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+                        setBrands(parsed.data)
+                        setScanProgress("Đã tải từ Cache")
+                        return // Skip scanning
+                    }
+                } catch (e) { localStorage.removeItem(CACHE_KEY) }
+            }
+
+            // 2. Scan if no cache
+            setLoadingBrands(true)
+            let allBrands: any[] = []
+            let offset = 0
+            let hasMore = true
+            const pageSize = 100
+
+            try {
+                // Using 500 pages limit (~50k brands) for safety
+                while (hasMore && !isCancelled && offset < 50000) {
+                    const res = await fetch(`/api/shops/${shopId}/brands?categoryId=${formData.categoryId}&offset=${offset}&pageSize=${pageSize}`)
+                    if (!res.ok) break
+
+                    const data = await res.json()
+                    const list = data.brand_list || []
+
+                    if (list.length > 0) {
+                        allBrands = [...allBrands, ...list]
+                        // Update UI every 500 items or so
+                        if (allBrands.length % 500 === 0 || !data.has_next_page) {
+                            setBrands(prev => [...prev, ...list])
+                            setScanProgress(`Đang quét... ${allBrands.length} thương hiệu`)
+                        } else {
+                            // Just update internal list, don't re-render excessively
+                        }
+                    }
+
+                    if (data.has_next_page) {
+                        offset = data.next_offset
+                        // Delay 300ms (Safe Mode)
+                        await new Promise(r => setTimeout(r, 300))
+                    } else {
+                        hasMore = false
+                    }
+                }
+
+                if (!isCancelled && allBrands.length > 0) {
+                    setBrands(allBrands) // Final update
+                    setScanProgress(`Hoàn tất (${allBrands.length})`)
+                    localStorage.setItem(CACHE_KEY, JSON.stringify({
+                        timestamp: Date.now(),
+                        data: allBrands
+                    }))
+                }
+            } catch (e) {
+                console.error("Scan Brands Error", e)
+            } finally {
+                setLoadingBrands(false)
+            }
+        }
+
+        setBrands([])
+        scanBrands()
+
+        return () => { isCancelled = true }
+    }, [shopId, formData.categoryId])
 
     const handleSave = async () => {
         // TODO: Implement Save (Multiple APIs)
@@ -227,6 +311,10 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
                         initialBrandId={rawItem.brand?.brand_id}
                         onChange={(attrs) => setFormData(prev => ({ ...prev, attributes: attrs }))}
                         onBrandChange={(brandId) => setFormData(prev => ({ ...prev, brandId: brandId }))}
+                        // Lifted Props
+                        brands={brands}
+                        loadingBrands={loadingBrands}
+                        scanProgress={scanProgress}
                     />
                 </TabsContent>
 
@@ -250,16 +338,22 @@ export function ProductEditor({ product, shopId }: ProductEditorProps) {
 
 // --- SUB COMPONENTS ---
 
-export function AttributeEditor({ shopId, categoryId, initialAttributes, initialBrandId, onChange, onBrandChange }: {
+export function AttributeEditor({
+    shopId, categoryId, initialAttributes, initialBrandId, onChange, onBrandChange,
+    brands, loadingBrands, scanProgress
+}: {
     shopId?: string,
     categoryId: number,
     initialAttributes: any[],
     initialBrandId?: number,
     onChange: (attrs: any[]) => void
     onBrandChange?: (brandId: number) => void
+    brands: any[]
+    loadingBrands: boolean
+    scanProgress: string
 }) {
     const [attributes, setAttributes] = React.useState<any[]>([])
-    const [brands, setBrands] = React.useState<any[]>([])
+    // Local brands state removed, using props
     const [values, setValues] = React.useState<Record<number, any>>({})
     const [selectedBrand, setSelectedBrand] = React.useState<number | null>(initialBrandId || null)
 
@@ -346,12 +440,16 @@ export function AttributeEditor({ shopId, categoryId, initialAttributes, initial
                         brands={brands}
                         value={selectedBrand}
                         onChange={(id) => handleBrandChange(String(id))}
-                        loading={loading}
+                        loading={loadingBrands}
+                        placeholder={scanProgress || (loadingBrands ? "Đang quét..." : "Chọn thương hiệu")}
                     />
 
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                        *Nhập tên để tìm kiếm. Chọn "No Brand" nếu không tìm thấy.
-                    </p>
+                    <div className="flex justify-between items-center mt-1">
+                        <p className="text-[10px] text-muted-foreground">
+                            *Nhập tên để tìm kiếm.
+                        </p>
+                        {scanProgress && <span className="text-[10px] text-blue-600 font-medium">{scanProgress}</span>}
+                    </div>
                 </div>
 
                 {attributes.map(attr => (
