@@ -52,6 +52,29 @@ function PlatformIcon({ platform }: { platform: string }) {
     )
 }
 
+// Helper for safe date formatting
+function safeTimeAgo(dateInput: any) {
+    try {
+        if (!dateInput) return 'Chưa đồng bộ'
+        const date = new Date(dateInput)
+        if (isNaN(date.getTime())) return 'Ngày không hợp lệ'
+        return formatDistanceToNow(date, { addSuffix: true, locale: vi })
+    } catch (e) {
+        return 'Lỗi ngày tháng'
+    }
+}
+
+function safeFormatTime(dateInput: any) {
+    try {
+        if (!dateInput) return ''
+        const date = new Date(dateInput)
+        if (isNaN(date.getTime())) return ''
+        return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    } catch (e) {
+        return ''
+    }
+}
+
 function StatusBadge({ active, expiresAt }: { active: boolean, expiresAt?: string }) {
     if (!active) return <Badge variant="destructive" className="rounded-full px-3">Mất kết nối</Badge>
 
@@ -208,10 +231,10 @@ export default function ShopsPage() {
                                     <TableCell>
                                         <div className="flex flex-col text-sm">
                                             <span className="text-foreground/80">
-                                                {shop.lastSync ? formatDistanceToNow(new Date(shop.lastSync), { addSuffix: true, locale: vi }) : 'Chưa đồng bộ'}
+                                                {safeTimeAgo(shop.lastSync)}
                                             </span>
                                             <span className="text-xs text-muted-foreground">
-                                                {shop.lastSync ? new Date(shop.lastSync).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                                {safeFormatTime(shop.lastSync)}
                                             </span>
                                         </div>
                                     </TableCell>
