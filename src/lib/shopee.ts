@@ -251,5 +251,27 @@ export const ShopeeClient = {
             throw new Error(`Shopee GetCategory Error: ${err}`)
         }
         return res.json()
+    },
+
+    /**
+     * Get Attributes for Category
+     */
+    async getAttributes(accessToken: string, shopId: number, categoryId: number) {
+        if (!PARTNER_ID || !PARTNER_KEY) throw new Error("Missing Shopee Config")
+
+        const path = "/api/v2/product/get_attributes"
+        const timestamp = Math.floor(Date.now() / 1000)
+
+        const baseString = `${PARTNER_ID}${path}${timestamp}${accessToken}${shopId}`
+        const sign = crypto.createHmac('sha256', PARTNER_KEY).update(baseString).digest('hex')
+
+        const url = `https://partner.shopeemobile.com${path}?partner_id=${PARTNER_ID}&timestamp=${timestamp}&access_token=${accessToken}&shop_id=${shopId}&sign=${sign}&category_id=${categoryId}&language=vi`
+
+        const res = await fetch(url, { method: "GET" })
+        if (!res.ok) {
+            const err = await res.text()
+            throw new Error(`Shopee GetAttributes Error: ${err}`)
+        }
+        return res.json()
     }
 }
