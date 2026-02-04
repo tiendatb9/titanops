@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { ShopeeClient } from "@/lib/shopee"
-import { ShopeeAuthService } from "@/lib/services/shopee-auth-service"
+import { ShopeeAuthService } from "@/lib/services/shopee-auth"
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
     try {
