@@ -63,9 +63,18 @@ export const columns: ColumnDef<Product>[] = [
                     </div>
                     <div className="flex flex-col max-w-[220px]">
                         <div className="flex items-center gap-1">
-                            <a href={product.sourceUrl || "#"} target="_blank" className="font-medium truncate hover:underline hover:text-blue-600" title={product.name}>
+                            {/* Link to Internal Edit Page */}
+                            <Link href={`/products/${product.id}/edit`} className="font-medium truncate hover:underline hover:text-primary" title={product.name}>
                                 {product.name}
-                            </a>
+                            </Link>
+                            {/* External Link Icon */}
+                            {product.sourceUrl && (
+                                <a href={product.sourceUrl} target="_blank" className="text-muted-foreground hover:text-blue-600">
+                                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                </a>
+                            )}
                         </div>
                         {product.variantName && (
                             <div className="text-xs font-semibold text-purple-600 mt-0.5">
@@ -162,7 +171,7 @@ export const columns: ColumnDef<Product>[] = [
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
-                            <Link href={`/products/builder/${payment.id}`}>Chỉnh sửa</Link>
+                            <Link href={`/products/${payment.id}/edit`}>Chỉnh sửa</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem>Đăng lên sàn</DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600">Xóa</DropdownMenuItem>
