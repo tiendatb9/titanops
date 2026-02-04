@@ -4,11 +4,12 @@ import { prisma } from "@/lib/prisma"
 import { ShopeeClient } from "@/lib/shopee"
 import { ShopeeAuthService } from "@/lib/services/shopee-auth"
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
     try {
         const body = await req.json()
-        const { categoryId } = body
+        const params = await props.params
         const shopId = params.id
+        const { categoryId } = body // offset, etc handles later
 
         if (!categoryId) return new NextResponse("Missing Category ID", { status: 400 })
 
