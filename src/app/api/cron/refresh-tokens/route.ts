@@ -13,7 +13,7 @@ export async function GET(req: Request) {
         }
         */
 
-        console.log("[Cron] Starting Shopee Token Refresh Job...")
+        console.log("[Cron] Starting Shopee Token Refresh Job... (V2 Check)")
 
         const now = new Date()
         const bufferTime = new Date(now.getTime() + 30 * 60 * 1000) // 30 mins from now
