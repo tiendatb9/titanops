@@ -25,9 +25,10 @@ interface BrandComboboxProps {
     value: number | null
     onChange: (value: number) => void
     loading?: boolean
+    placeholder?: string
 }
 
-export function BrandCombobox({ brands, value, onChange, loading }: BrandComboboxProps) {
+export function BrandCombobox({ brands, value, onChange, loading, placeholder }: BrandComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
     // Ensure we handle "0" or null correctly
