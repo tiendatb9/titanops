@@ -15,6 +15,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { CategoryCascader } from "./category-cascader"
+import { BrandCombobox } from "./brand-combobox"
+
 
 interface ProductEditorProps {
     product: any
@@ -327,29 +329,23 @@ export function AttributeEditor({ shopId, categoryId, initialAttributes, initial
                 <CardDescription>Điền đầy đủ các thuộc tính để tăng độ hiển thị.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                {/* BRAND FIELD (ALWAYS FIRST) */}
+                {/* BRAND FIELD (Searchable Combobox) */}
                 <div className="grid gap-2">
                     <Label className="flex gap-1">
                         Thương hiệu / Tác giả
                         <span className="text-red-500">*</span>
                     </Label>
-                    <div className="relative">
-                        <select
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            value={selectedBrand || ""}
-                            onChange={(e) => handleBrandChange(e.target.value)}
-                        >
-                            <option value="0">No Brand / Không có thương hiệu</option>
-                            {brands.map((b: any) => (
-                                <option key={b.brand_id} value={b.brand_id}>
-                                    {b.display_brand_name} {b.original_brand_name !== b.display_brand_name ? `(${b.original_brand_name})` : ''}
-                                </option>
-                            ))}
-                        </select>
-                        <p className="text-[10px] text-muted-foreground mt-1">
-                            *Chọn "No Brand" nếu không tìm thấy tác giả.
-                        </p>
-                    </div>
+
+                    <BrandCombobox
+                        brands={brands}
+                        value={selectedBrand}
+                        onChange={(id) => handleBrandChange(String(id))}
+                        loading={loading}
+                    />
+
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                        *Nhập tên để tìm kiếm. Chọn "No Brand" nếu không tìm thấy.
+                    </p>
                 </div>
 
                 {attributes.map(attr => (

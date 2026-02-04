@@ -24,15 +24,37 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
         const accessToken = await ShopeeAuthService.getValidAccessToken(shop.id)
 
-        // Fetch Brands (First page only for now, 100 items)
-        const res = await ShopeeClient.getBrandList(accessToken, Number(shop.platformShopId), Number(categoryId))
+        // Fetch ALL Brands (Loop Pagination)
+        let allBrands: any[] = []
+        let offset = 0
+        let hasNextPage = true
+        const pageSize = 100 // Max page size
 
-        if (res.error) {
-            return new NextResponse(`Shopee Error: ${res.error} - ${res.message}`, { status: 500 })
+        // Safety limit to prevent infinite loops or timeout (e.g. 50 pages = 5000 brands)
+        // If user says "tens of thousands", we might need more, but let's start with safe limit.
+        const MAX_PAGES = 100
+        let pageCount = 0
+
+        while (hasNextPage && pageCount < MAX_PAGES) {
+            const res = await ShopeeClient.getBrandList(accessToken, Number(shop.platformShopId), Number(categoryId), offset, pageSize)
+
+            if (res.error) {
+                console.error("Brand Fetch Error", res)
+                break
+            }
+
+            const list = res.response?.brand_list || []
+            allBrands = [...allBrands, ...list]
+
+            hasNextPage = res.response?.has_next_page
+            offset = res.response?.next_offset
+            pageCount++
+
+            // Small delay to be nice to API?
+            // await new Promise(r => setTimeout(r, 100))
         }
 
-        const list = res.response?.brand_list || []
-        return NextResponse.json(list)
+        return NextResponse.json(allBrands)
 
     } catch (error: any) {
         console.error("[Brands_GET]", error)
