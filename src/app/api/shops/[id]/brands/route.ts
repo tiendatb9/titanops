@@ -30,9 +30,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         let hasNextPage = true
         const pageSize = 100 // Max page size
 
-        // Safety limit to prevent infinite loops or timeout (e.g. 50 pages = 5000 brands)
-        // If user says "tens of thousands", we might need more, but let's start with safe limit.
-        const MAX_PAGES = 100
+        // Safety limit (increased for full scan as requested)
+        // User reports tens of thousands of brands. 
+        // 1000 pages * 100 items = 100,000 brands. This should be sufficient.
+        const MAX_PAGES = 1000
         let pageCount = 0
 
         while (hasNextPage && pageCount < MAX_PAGES) {
