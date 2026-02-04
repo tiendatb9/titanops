@@ -17,19 +17,22 @@ export const ShopeeAuthService = {
         const creds = shop.credentials as any
         const now = new Date()
 
-        // Check Expiry (from DB column or JSON fallback)
-        const expiresAt = shop.tokenExpiresAt || (creds.expire_in ? new Date(creds.updated_at + creds.expire_in * 1000) : null)
+        // Check Expiry (Handle both camelCase and snake_case)
+        const expireIn = creds.expireIn || creds.expire_in
+        const updatedAt = creds.updatedAt || creds.updated_at
+
+        const expiresAt = shop.tokenExpiresAt || (expireIn ? new Date((updatedAt || Date.now()) + expireIn * 1000) : null)
 
         // If we don't know expiry, or it's past/soon, refresh it.
-        // Safety buffer: 5 minutes (300000 ms)
         const isExpiring = !expiresAt || (expiresAt.getTime() - now.getTime() < 5 * 60 * 1000)
 
         if (isExpiring) {
             console.log(`[ShopeeAuth] Token for shop ${shop.name} is expiring/expired. Refreshing...`)
-            return await this.refreshToken(shopId, creds.refresh_token)
+            const refreshToken = creds.refreshToken || creds.refresh_token
+            return await this.refreshToken(shopId, refreshToken) // shopId is UUID
         }
 
-        return creds.access_token
+        return creds.accessToken || creds.access_token
     },
 
     /**
