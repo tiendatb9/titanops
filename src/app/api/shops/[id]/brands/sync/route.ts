@@ -18,38 +18,32 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
         const shop = await prisma.shop.findUnique({ where: { id: shopId } })
         if (!shop) return new NextResponse("Shop not found", { status: 404 })
 
-        // 2. Fetch Loop
-        let offset = 0
-        let hasMore = true
-        let totalSynced = 0
-        const pageSize = 100 // Shopee max
-        const MAX_PAGES = 1000 // Limit 100k
+        // 2. Fetch Single Chunk (Controlled by Frontend)
+        const offset = body.offset || 0
+        const pageSize = 100
 
-        console.log(`[BrandSync] Starting sync for Cat ${categoryId}...`)
+        console.log(`[BrandSync] Syncing chunk offset ${offset} for Cat ${categoryId}...`)
 
-        while (hasMore && offset < MAX_PAGES * pageSize) {
-            const res = await ShopeeClient.getBrandList(
-                accessToken,
-                Number(shop.platformShopId),
-                Number(categoryId),
-                offset,
-                pageSize
-            )
+        const res = await ShopeeClient.getBrandList(
+            accessToken,
+            Number(shop.platformShopId),
+            Number(categoryId),
+            offset,
+            pageSize
+        )
 
-            if (res.error) {
-                console.error("Brand Sync Error", res)
-                return new NextResponse(`Shopee Error: ${res.message}`, { status: 500 })
-            }
+        if (res.error) {
+            console.error("Brand Sync Error", res)
+            // Fix: Return detailed JSON error if Shopee fails
+            return new NextResponse(JSON.stringify({
+                error: `Shopee API Error: ${res.message}`,
+                shopee_error: res.error
+            }), { status: 500 })
+        }
 
-            const list = res.response?.brand_list || []
-            if (list.length === 0) break
+        const list = res.response?.brand_list || []
 
-            // 3. Upsert Batch
-            // Prisma createMany doesn't support upsert (skipDuplicates ignores updates)
-            // But we want to update if exists.
-            // Loop upsert is slow? 100 items is fine.
-            // Or createMany with skipDuplicates (if ID matches, name rarely changes).
-
+        if (list.length > 0) {
             // Transform for Prisma
             const data = list.map((b: any) => ({
                 shopeeBrandId: BigInt(b.brand_id),
@@ -60,22 +54,10 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
             }))
 
             // Use createMany with skipDuplicates for speed
-            // We assume brand names don't change often.
             await prisma.brand.createMany({
                 data,
                 skipDuplicates: true
             })
-
-            totalSynced += list.length
-            console.log(`[BrandSync] Synced ${totalSynced} brands...`)
-
-            if (res.response?.has_next_page) {
-                offset = res.response.next_offset
-                // Delay to be safe
-                await new Promise(r => setTimeout(r, 200))
-            } else {
-                hasMore = false
-            }
         }
 
         return NextResponse.json({
@@ -86,6 +68,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
         })
 
     } catch (e: any) {
+
         console.error("Sync Error", e)
         // Return detailed error for debugging
         return new NextResponse(JSON.stringify({
