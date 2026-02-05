@@ -79,8 +79,9 @@ export async function GET(req: Request) {
         })
 
         return NextResponse.redirect(new URL("/shops?success=true", req.url))
-    } catch (error) {
+    } catch (error: any) {
         console.error("[SHOPEE_CALLBACK]", error)
-        return NextResponse.redirect(new URL("/shops?error=connection_failed", req.url))
+        const msg = error?.message || "Unknown Error"
+        return NextResponse.redirect(new URL(`/shops?error=connection_failed&msg=${encodeURIComponent(msg)}`, req.url))
     }
 }
