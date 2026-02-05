@@ -9,10 +9,11 @@ BigInt.prototype.toJSON = function () {
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined }
 
 const prismaClientSingleton = () => {
-    // Polyfill for Vercel Build where DATABASE_URL might be missing or invalid
-    // This allows the client to be instantiated without throwing "PrismaClientInitializationError"
-    if (!process.env.DATABASE_URL || !process.env.DATABASE_URL.startsWith("postgres")) {
-        console.warn("⚠️  DATABASE_URL missing or invalid. Using dummy for Build.")
+    // Polyfill for Vercel Build where DATABASE_URL might be missing.
+    // We relaxed the check: If DATABASE_URL exists, we TRUST it (even if it is neondb:// or missing postgres prefix)
+    // We only force Dummy if it is completely MISSING (empty string or undefined)
+    if (!process.env.DATABASE_URL) {
+        console.warn("⚠️  DATABASE_URL missing. Using dummy for Build.")
         process.env.DATABASE_URL = "postgresql://dummy:dummy@localhost:5432/dummy"
     }
 
