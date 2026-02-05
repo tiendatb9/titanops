@@ -1,4 +1,6 @@
 "use client"
+// Trigger Deploy: Improved Sidebar UX
+
 
 import { ChevronRight, type LucideIcon } from "lucide-react"
 
