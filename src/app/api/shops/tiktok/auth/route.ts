@@ -1,5 +1,6 @@
 
 import { NextResponse } from "next/server"
+import { TikTokClient } from "@/lib/tiktok"
 
 export const dynamic = 'force-dynamic' // Force dynamic
 
