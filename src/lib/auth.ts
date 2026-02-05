@@ -9,7 +9,8 @@ import { z } from "zod"
 import { authConfig } from "./auth.config"
 
 // Conditionally apply adapter to prevent build-time DB connection
-const adapter = (process.env.DATABASE_URL) ? PrismaAdapter(prisma) : undefined
+const isBuild = process.env.npm_lifecycle_event === "build"
+const adapter = (process.env.DATABASE_URL && !isBuild) ? PrismaAdapter(prisma) : undefined
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
     ...authConfig,
