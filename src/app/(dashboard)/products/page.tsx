@@ -15,7 +15,7 @@ export default async function ProductsPage() {
     })
 
     // Transform Decimal to Number for Client safety
-    const safeProducts = products.map(p => ({
+    const safeProducts = products.map((p: any) => ({
         id: p.id,
         name: p.name,
         sku: p.sku,
