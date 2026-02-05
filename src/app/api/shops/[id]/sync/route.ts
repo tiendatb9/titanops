@@ -4,6 +4,8 @@ import { ShopeeClient } from "@/lib/shopee"
 import { ShopeeAuthService } from "@/lib/services/shopee-auth"
 import { NextResponse } from "next/server"
 
+export const dynamic = 'force-dynamic' // Force dynamic
+
 export async function POST(
     req: Request,
     { params }: { params: Promise<{ id: string }> }

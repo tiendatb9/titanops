@@ -8,6 +8,8 @@ const updateShopSchema = z.object({
     isActive: z.boolean().optional()
 })
 
+export const dynamic = 'force-dynamic' // Force dynamic
+
 export async function PATCH(
     req: Request,
     { params }: { params: Promise<{ id: string }> }

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma"
 import { ShopeeClient } from "@/lib/shopee"
 import { ShopeeAuthService } from "@/lib/services/shopee-auth"
 
+export const dynamic = 'force-dynamic' // Force dynamic
+
 export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
     try {
         const body = await req.json()
