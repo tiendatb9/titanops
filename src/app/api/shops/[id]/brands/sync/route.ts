@@ -78,10 +78,21 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
             }
         }
 
-        return NextResponse.json({ success: true, count: totalSynced })
+        return NextResponse.json({
+            success: true,
+            syncedCount: list.length,
+            nextOffset: res.response?.next_offset,
+            hasNextPage: res.response?.has_next_page
+        })
 
     } catch (e: any) {
         console.error("Sync Error", e)
-        return new NextResponse(e.message, { status: 500 })
+        // Return detailed error for debugging
+        return new NextResponse(JSON.stringify({
+            error: e.message,
+            stack: e.stack,
+            type: e.constructor.name
+        }), { status: 500 })
     }
 }
+
