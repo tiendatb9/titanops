@@ -18,6 +18,8 @@ import {
     SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 
+import { usePathname } from "next/navigation"
+
 export function NavMain({
     items,
 }: {
@@ -32,16 +34,26 @@ export function NavMain({
         }[]
     }[]
 }) {
+    const pathname = usePathname()
+
     return (
         <SidebarGroup>
             <SidebarGroupLabel>Platform</SidebarGroupLabel>
             <SidebarMenu>
                 {items.map((item) => {
+                    // Check if any child is active
+                    const isChildActive = item.items?.some(subItem =>
+                        pathname === subItem.url || pathname.startsWith(subItem.url + '/')
+                    )
+                    // Expand if child active or item itself active
+                    const isOpen = isChildActive || item.isActive
+
                     // Fix: Handle items without sub-items (Leaf nodes)
                     if (!item.items || item.items.length === 0) {
+                        const isSelfActive = pathname === item.url
                         return (
                             <SidebarMenuItem key={item.title}>
-                                <SidebarMenuButton asChild tooltip={item.title} isActive={item.isActive}>
+                                <SidebarMenuButton asChild tooltip={item.title} isActive={isSelfActive} className="cursor-pointer">
                                     <a href={item.url}>
                                         {item.icon && <item.icon />}
                                         <span>{item.title}</span>
@@ -55,12 +67,12 @@ export function NavMain({
                         <Collapsible
                             key={item.title}
                             asChild
-                            defaultOpen={item.isActive}
+                            defaultOpen={isOpen} // Use dynamic open state
                             className="group/collapsible"
                         >
                             <SidebarMenuItem>
                                 <CollapsibleTrigger asChild>
-                                    <SidebarMenuButton tooltip={item.title}>
+                                    <SidebarMenuButton tooltip={item.title} className="cursor-pointer">
                                         {item.icon && <item.icon />}
                                         <span>{item.title}</span>
                                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -68,15 +80,18 @@ export function NavMain({
                                 </CollapsibleTrigger>
                                 <CollapsibleContent>
                                     <SidebarMenuSub>
-                                        {item.items?.map((subItem) => (
-                                            <SidebarMenuSubItem key={subItem.title}>
-                                                <SidebarMenuSubButton asChild>
-                                                    <a href={subItem.url}>
-                                                        <span>{subItem.title}</span>
-                                                    </a>
-                                                </SidebarMenuSubButton>
-                                            </SidebarMenuSubItem>
-                                        ))}
+                                        {item.items?.map((subItem) => {
+                                            const isSubActive = pathname === subItem.url
+                                            return (
+                                                <SidebarMenuSubItem key={subItem.title}>
+                                                    <SidebarMenuSubButton asChild isActive={isSubActive} className="cursor-pointer">
+                                                        <a href={subItem.url}>
+                                                            <span>{subItem.title}</span>
+                                                        </a>
+                                                    </SidebarMenuSubButton>
+                                                </SidebarMenuSubItem>
+                                            )
+                                        })}
                                     </SidebarMenuSub>
                                 </CollapsibleContent>
                             </SidebarMenuItem>
