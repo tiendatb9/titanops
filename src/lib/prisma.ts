@@ -13,11 +13,7 @@ const prismaClientSingleton = () => {
     const url = process.env.DATABASE_URL || "postgresql://dummy:dummy@localhost:5432/dummy"
 
     return new PrismaClient({
-        datasources: {
-            db: {
-                url: url
-            }
-        }
+        datasourceUrl: url
     })
 }
 
