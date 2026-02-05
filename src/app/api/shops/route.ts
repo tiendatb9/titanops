@@ -13,6 +13,8 @@ export async function GET(req: Request) {
             return new NextResponse("Unauthorized", { status: 401 })
         }
 
+        console.log("[SHOPS_GET] Fetching for User:", session.user.id)
+
         const shops = await prisma.shop.findMany({
             where: {
                 userId: session.user.id,
@@ -26,6 +28,8 @@ export async function GET(req: Request) {
                 createdAt: true,
             }
         })
+
+        console.log("[SHOPS_GET] Found:", shops.length, "shops")
 
         const formattedShops = shops.map((shop: any) => ({
             id: shop.id,
