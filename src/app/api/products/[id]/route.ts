@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
 
+export const dynamic = 'force-dynamic' // Force dynamic to prevent build crash
+
 export async function PUT(
     req: Request,
     { params }: { params: Promise<{ id: string }> }
