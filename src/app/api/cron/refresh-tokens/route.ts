@@ -16,18 +16,19 @@ export async function GET(req: Request) {
         console.log("[Cron] Starting Shopee Token Refresh Job... (V2 Check)")
 
         const now = new Date()
-        const bufferTime = new Date(now.getTime() + 30 * 60 * 1000) // 30 mins from now
+        // Buffer Time: 4 Hours (Standard Access Token Life) to be safe. 
+        // We want to refresh successfully well before it dies.
+        const bufferTime = new Date(now.getTime() + 4 * 60 * 60 * 1000)
 
-        // Find Shops that are Active AND (Expired OR Expiring Soon)
-        // Note: Prisma JSON filter is database dependent. 
-        // We now have 'tokenExpiresAt' column! Much easier.
+        // Find Shops that are Active AND (Expired OR Expiring Soon OR Unknown Expiry)
         const shops = await prisma.shop.findMany({
             where: {
                 platform: 'SHOPEE',
                 isActive: true,
-                tokenExpiresAt: {
-                    lt: bufferTime
-                }
+                OR: [
+                    { tokenExpiresAt: { lt: bufferTime } },
+                    { tokenExpiresAt: null } // Handle legacy/migrated shops
+                ]
             }
         })
 
