@@ -8,9 +8,12 @@ import bcrypt from "bcryptjs"
 import { z } from "zod"
 import { authConfig } from "./auth.config"
 
+// Conditionally apply adapter to prevent build-time DB connection
+const adapter = (process.env.DATABASE_URL) ? PrismaAdapter(prisma) : undefined
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
     ...authConfig,
-    adapter: PrismaAdapter(prisma),
+    adapter: adapter,
     providers: [
         Google({
             clientId: process.env.GOOGLE_CLIENT_ID,
