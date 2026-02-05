@@ -1,4 +1,4 @@
-import { handlers } from "@/lib/auth" // Referring timport { handlers from "@/lib/auth"
+import { handlers } from "@/lib/auth"
 
 export const dynamic = 'force-dynamic' // Force dynamic
 
