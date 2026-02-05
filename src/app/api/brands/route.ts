@@ -9,6 +9,8 @@ const bigIntReplacer = (key: string, value: any) => {
     return value
 }
 
+export const dynamic = 'force-dynamic' // Prevent Static Generation
+
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const categoryId = searchParams.get("categoryId")
