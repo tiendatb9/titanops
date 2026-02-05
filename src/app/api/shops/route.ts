@@ -25,7 +25,7 @@ export async function GET() {
             }
         })
 
-        const formattedShops = shops.map(shop => ({
+        const formattedShops = shops.map((shop: any) => ({
             id: shop.id,
             name: shop.name,
             platform: shop.platform,
