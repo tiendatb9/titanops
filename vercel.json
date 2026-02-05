@@ -4,6 +4,6 @@
             "path": "/api/cron/refresh-tokens",
             "schedule": "*/10 * * * *"
         }
-    ]
+    ],
+    "meta": "Trigger Vercel Deploy 2026-02-06"
 }
-// Trigger Vercel Deploy: 2026-02-06
