@@ -5,6 +5,8 @@ import { ShopeeClient } from "@/lib/shopee"
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 
+export const dynamic = 'force-dynamic' // Force dynamic
+
 export async function GET(req: Request) {
     try {
         const session = await auth()
