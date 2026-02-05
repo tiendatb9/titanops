@@ -1,8 +1,7 @@
 
-import { auth } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
-import { TikTokClient } from "@/lib/tiktok"
 import { NextResponse } from "next/server"
+
+export const dynamic = 'force-dynamic' // Force dynamic
 
 export async function GET(req: Request) {
     try {
