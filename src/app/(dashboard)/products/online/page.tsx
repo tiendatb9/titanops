@@ -36,7 +36,7 @@ async function getOnlineProducts(userId: string) {
     })
 
     // Transform for UI (matches columns schema)
-    const formattedProducts = products.map(p => {
+    const formattedProducts = products.map((p: any) => {
         return {
             id: p.id,
             name: p.name,
