@@ -1,36 +1,33 @@
+
 import { PrismaClient } from "@prisma/client"
+import { Pool } from "pg"
+import { PrismaPg } from "@prisma/adapter-pg"
 
-// Patch BigInt serialization for JSON.stringify
-// @ts-ignore
-BigInt.prototype.toJSON = function () {
-    return this.toString()
-}
+// Prevent multiple instances of Prisma Client in development
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined }
+// Only initialize Prisma Client if we have a Database URL
+const connectionString = process.env.DATABASE_URL
 
-const prismaClientSingleton = () => {
-    // Polyfill for Vercel Build checks
-    const url = process.env.DATABASE_URL || "postgresql://dummy:dummy@localhost:5432/dummy"
+let prismaInstance: PrismaClient;
 
-    return new PrismaClient({
-        datasourceUrl: url
-    })
-}
-
-// Lazy initialization using Proxy
-// This prevents Next.js from connecting to DB during "Collecting Page Data" (Static Gen)
-export const prisma = new Proxy({} as PrismaClient, {
-    get: (target, prop) => {
-        // Initialize only on first access of any property
-        if (!globalForPrisma.prisma) {
-            globalForPrisma.prisma = prismaClientSingleton()
-        }
-        return Reflect.get(globalForPrisma.prisma, prop)
+if (globalForPrisma.prisma) {
+    prismaInstance = globalForPrisma.prisma
+} else {
+    // Check if we are in a browser or edge environment where process.env might differ
+    if (!connectionString) {
+        // Fallback for build time or client-side strictness? 
+        // Just create empty or throw? 
+        // Ideally we shouldn't import this file on client.
+        // For now, create standard client if no URL (will fail on connect)
+        prismaInstance = new PrismaClient()
+    } else {
+        const pool = new Pool({ connectionString })
+        const adapter = new PrismaPg(pool)
+        prismaInstance = new PrismaClient({ adapter })
     }
-})
-
-if (process.env.NODE_ENV !== "production") {
-    // In Dev, we might want to attach it globalThis to survive hot-reloads.
-    // However, since we use Proxy, the Proxy itself is stateless but redirects to globalForPrisma.
-    // So if globalForPrisma.prisma is set, it reuses it.
 }
+
+export const prisma = prismaInstance
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma

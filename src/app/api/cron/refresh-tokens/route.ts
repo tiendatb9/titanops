@@ -3,8 +3,6 @@ import { prisma } from "@/lib/prisma"
 import { ShopeeAuthService } from "@/lib/services/shopee-auth"
 import { NextResponse } from "next/server"
 
-export const dynamic = 'force-dynamic' // Force dynamic to prevent build crash
-
 export async function GET(req: Request) {
     try {
         // Optional: Check CRON_SECRET if using Vercel Cron

@@ -31,7 +31,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     const channelMap = new Map<string, { shopId: string, shopName: string, platform: any, platformItemId: string }>()
 
     // Check Master Listings
-    product.listings.forEach((l: any) => {
+    product.listings.forEach(l => {
         if (!channelMap.has(l.shopId)) {
             channelMap.set(l.shopId, {
                 shopId: l.shop.id,

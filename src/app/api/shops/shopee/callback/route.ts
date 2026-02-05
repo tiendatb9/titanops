@@ -5,8 +5,6 @@ import { ShopeeClient } from "@/lib/shopee"
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 
-export const dynamic = 'force-dynamic' // Force dynamic
-
 export async function GET(req: Request) {
     try {
         const session = await auth()
@@ -79,9 +77,8 @@ export async function GET(req: Request) {
         })
 
         return NextResponse.redirect(new URL("/shops?success=true", req.url))
-    } catch (error: any) {
+    } catch (error) {
         console.error("[SHOPEE_CALLBACK]", error)
-        const msg = error?.message || "Unknown Error"
-        return NextResponse.redirect(new URL(`/shops?error=connection_failed&msg=${encodeURIComponent(msg)}`, req.url))
+        return NextResponse.redirect(new URL("/shops?error=connection_failed", req.url))
     }
 }

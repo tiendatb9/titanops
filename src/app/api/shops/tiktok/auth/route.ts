@@ -1,8 +1,6 @@
 
-import { NextResponse } from "next/server"
 import { TikTokClient } from "@/lib/tiktok"
-
-export const dynamic = 'force-dynamic' // Force dynamic
+import { NextResponse } from "next/server"
 
 export async function GET() {
     try {

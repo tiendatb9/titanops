@@ -1,13 +1,2 @@
-import { handlers } from "@/lib/auth"
-import { NextRequest } from "next/server"
-
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
-
-export async function GET(req: NextRequest) {
-    return handlers.GET(req)
-}
-
-export async function POST(req: NextRequest) {
-    return handlers.POST(req)
-}
+import { handlers } from "@/lib/auth" // Referring to the auth.ts we just created
+export const { GET, POST } = handlers

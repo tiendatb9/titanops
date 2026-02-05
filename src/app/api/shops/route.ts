@@ -4,16 +4,12 @@ import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
-export const dynamic = 'force-dynamic'
-
-export async function GET(req: Request) {
+export async function GET() {
     try {
         const session = await auth()
         if (!session?.user?.id) {
             return new NextResponse("Unauthorized", { status: 401 })
         }
-
-        console.log("[SHOPS_GET] Fetching for User:", session.user.id)
 
         const shops = await prisma.shop.findMany({
             where: {
@@ -29,9 +25,7 @@ export async function GET(req: Request) {
             }
         })
 
-        console.log("[SHOPS_GET] Found:", shops.length, "shops")
-
-        const formattedShops = shops.map((shop: any) => ({
+        const formattedShops = shops.map(shop => ({
             id: shop.id,
             name: shop.name,
             platform: shop.platform,

@@ -2,8 +2,6 @@
 import { ShopeeClient } from "@/lib/shopee"
 import { NextResponse } from "next/server"
 
-export const dynamic = 'force-dynamic' // Force dynamic
-
 export async function GET() {
     try {
         const url = ShopeeClient.generateAuthUrl()
