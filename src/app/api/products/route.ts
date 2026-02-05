@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { ProductBuilderValues, productBuilderSchema } from "@/components/products/builder/schema"
 
+export const dynamic = 'force-dynamic' // Force dynamic to prevent build crash
+
 export async function POST(req: Request) {
     try {
         const session = await auth()
