@@ -314,6 +314,7 @@ export function AttributeEditor({
     brands: any[]
     loadingBrands: boolean
     scanProgress: string
+    onSyncSuccess?: () => void
 }) {
     const [attributes, setAttributes] = React.useState<any[]>([])
     // Local brands state removed, using props
