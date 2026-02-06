@@ -29,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { CategoryCascader } from "./category-cascader"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
@@ -81,6 +82,8 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
     const [variants, setVariants] = useState<any[]>([])
     const [shopeeAttributes, setShopeeAttributes] = useState<any[]>([])
     const [isLoadingAttributes, setIsLoadingAttributes] = useState(false)
+    const [categories, setCategories] = useState<any[]>([])
+    const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined)
 
     // Reset form when product changes
     useEffect(() => {
@@ -119,6 +122,9 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
             // But let's assume it might or we use a fallback.
             // If the real categoryId is missing, we can't fetch. 
             if (product.shopId && product.categoryId) {
+                // Set initial category selection
+                setSelectedCategoryId(Number(product.categoryId))
+
                 setIsLoadingAttributes(true)
                 fetch(`/api/shopee/attributes?shopId=${product.shopId}&categoryId=${product.categoryId}`)
                     .then(res => res.json())
@@ -130,9 +136,25 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
                     .finally(() => setIsLoadingAttributes(false))
             }
 
+            // FETCH CATEGORIES (If shopId exists)
+            if (product.shopId) {
+                fetch(`/api/shopee/category?shopId=${product.shopId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.response?.category_list) {
+                            setCategories(data.response.category_list)
+                        } else if (data.category_list) {
+                            setCategories(data.category_list)
+                        }
+                    })
+                    .catch(e => console.error("Failed to fetch categories", e))
+            }
+
         } else {
             setVariants([])
             setShopeeAttributes([])
+            setCategories([])
+            setSelectedCategoryId(undefined)
             form.reset({
                 name: "",
                 sku: "",
@@ -175,19 +197,34 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
                                 </TabsList>
 
                                 <TabsContent value="general" className="space-y-4 pt-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="name"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Tên sản phẩm</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="Nhập tên sản phẩm..." {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
                                         )}
                                     />
+
+                                    <div className="space-y-2">
+                                        <Label>Danh mục Shopee</Label>
+                                        <CategoryCascader
+                                            categories={categories}
+                                            value={selectedCategoryId}
+                                            onSelect={(id) => {
+                                                setSelectedCategoryId(id)
+                                                // Trigger attribute fetch
+                                                if (product?.shopId) {
+                                                    setIsLoadingAttributes(true)
+                                                    fetch(`/api/shopee/attributes?shopId=${product.shopId}&categoryId=${id}`)
+                                                        .then(res => res.json())
+                                                        .then(data => {
+                                                            if (data.response?.attribute_list) {
+                                                                setShopeeAttributes(data.response.attribute_list)
+                                                            } else {
+                                                                setShopeeAttributes([])
+                                                            }
+                                                        })
+                                                        .finally(() => setIsLoadingAttributes(false))
+                                                }
+                                            }}
+                                        />
+                                        <p className="text-[10px] text-muted-foreground">*Chọn đúng danh mục để hiển thị đúng thuộc tính sản phẩm.</p>
+                                    </div>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <FormField
