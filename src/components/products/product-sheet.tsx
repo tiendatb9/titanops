@@ -197,6 +197,17 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
                                 </TabsList>
 
                                 <TabsContent value="general" className="space-y-4 pt-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="name"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Tên sản phẩm</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Nhập tên sản phẩm..." {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
                                         )}
                                     />
 

@@ -1,14 +1,14 @@
+```typescript
 import { NextRequest, NextResponse } from "next/server"
 import { ShopeeClient } from "@/lib/shopee"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 const partnerId = Number(process.env.SHOPEE_PARTNER_ID)
 const partnerKey = process.env.SHOPEE_PARTNER_KEY!
 
 export async function GET(request: NextRequest) {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
