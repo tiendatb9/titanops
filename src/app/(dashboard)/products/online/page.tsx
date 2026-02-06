@@ -151,16 +151,15 @@ export default async function OnlineProductsPage(props: {
                 </div>
             </div>
 
-            <div className="flex items-center gap-4">
-                <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        type="search"
-                        placeholder="Tìm kiếm theo tên, SKU hoặc ID sàn..."
-                        className="pl-8"
-                    />
+            <div className="flex flex-col gap-4 mb-6">
+                <div className="flex items-center gap-4">
+                    <SearchInput placeholder="Tìm theo tên, SKU hoặc Variant..." />
+
+                    <Button variant="outline" className="gap-2">
+                        <Filter className="h-4 w-4" />
+                        Lọc Shop/Sàn
+                    </Button>
                 </div>
-                <Button variant="outline"><Filter className="mr-2 h-4 w-4" /> Lọc Shop/Sàn</Button>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
