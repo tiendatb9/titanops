@@ -1,4 +1,5 @@
 export type Product = {
+    id: string
     type?: 'first' | 'sub' // New logic
     parentName?: string
     parentImage?: string
