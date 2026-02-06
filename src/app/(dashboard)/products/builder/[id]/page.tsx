@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma"
 import { redirect, notFound } from "next/navigation"
 import { ProductBuilder } from "@/components/products/builder/product-builder"
 import { ProductBuilderValues } from "@/components/products/builder/schema"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await auth()
