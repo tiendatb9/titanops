@@ -33,7 +33,22 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         })
     }
 
-    if (!product) notFound()
+    if (!product) {
+        // DEBUGGING 404
+        return (
+            <div className="p-10 text-red-500 space-y-4">
+                <h1 className="text-2xl font-bold">Product Not Found (404)</h1>
+                <div className="bg-slate-100 p-4 rounded text-black font-mono text-sm">
+                    <p><strong>Requested ID:</strong> {id}</p>
+                    <p><strong>User ID:</strong> {session.user.id}</p>
+                    <p><strong>Lookup 1 (Unique ID):</strong> Failed</p>
+                    <p><strong>Lookup 2 (Source ID):</strong> Failed</p>
+                    <p><strong>Suggestion:</strong> Check if this ID exists in the 'Product' table under 'id' or 'sourceId'.</p>
+                </div>
+                <Button asChild><Link href="/products">Back to List</Link></Button>
+            </div>
+        )
+    }
 
     // Fetch Siblings/Variants (Flat Architecture: Group by sourceId)
     // If product has sourceId, fetch all products with same sourceId
