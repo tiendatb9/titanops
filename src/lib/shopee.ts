@@ -156,6 +156,63 @@ export const ShopeeClient = {
         return json.response
     },
 
+    async updatePrice(accessToken: string, shopId: number, itemId: number, price: number, modelId?: number) {
+        const path = "/api/v2/product/update_price"
+        const creds = ShopeeClient.sign(path, { access_token: accessToken, shop_id: shopId })
+        const url = `https://partner.shopeemobile.com${path}?partner_id=${creds.partner_id}&timestamp=${creds.timestamp}&sign=${creds.sign}&access_token=${accessToken}&shop_id=${shopId}`
+
+        const payload: any = {
+            item_id: itemId,
+            price_list: [
+                {
+                    original_price: price
+                }
+            ]
+        }
+        if (modelId) {
+            payload.price_list[0].model_id = modelId
+        }
+
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        })
+        return res.json()
+    },
+
+    /**
+     * Get Category Attributes (Use GET)
+     */
+    async getAttributes(accessToken: string, shopId: number, categoryId: number) {
+        if (!PARTNER_ID || !PARTNER_KEY) throw new Error("Missing Shopee Config")
+        const path = "/api/v2/product/get_attributes"
+        const creds = ShopeeClient.sign(path, { access_token: accessToken, shop_id: shopId })
+
+        // Ensure category_id is in the URL for GET request logic if needed, 
+        // but looking at Shopee V2 docs, get_attributes is GET.
+        // And params must be SIGNED?
+        // Wait, ShopeeClient.sign() returns the query params including signature.
+
+        const url = `https://partner.shopeemobile.com${path}?partner_id=${creds.partner_id}&timestamp=${creds.timestamp}&sign=${creds.sign}&access_token=${accessToken}&shop_id=${shopId}&category_id=${categoryId}&language=vi`
+
+        const res = await fetch(url)
+        return res.json()
+    },
+
+    /**
+     * Get Category List
+     */
+    async getCategoryList(accessToken: string, shopId: number) {
+        if (!PARTNER_ID || !PARTNER_KEY) throw new Error("Missing Shopee Config")
+        const path = "/api/v2/product/get_category"
+        const creds = ShopeeClient.sign(path, { access_token: accessToken, shop_id: shopId })
+        const url = `https://partner.shopeemobile.com${path}?partner_id=${creds.partner_id}&timestamp=${creds.timestamp}&sign=${creds.sign}&access_token=${accessToken}&shop_id=${shopId}&language=vi`
+
+        const res = await fetch(url)
+        return res.json()
+    },
+
     /**
      * Get Item List
      */
