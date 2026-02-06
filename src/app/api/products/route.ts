@@ -20,6 +20,22 @@ export async function POST(req: Request) {
         const userId = session.user.id
 
         // Create Single Product (Flat)
+        const { searchParams } = new URL(req.url)
+        const query = searchParams.get('query')
+        const sourceId = searchParams.get('sourceId')
+
+        const where: any = {
+            userId: session.user.id
+        }
+
+        if (query) {
+            where.name = { contains: query, mode: "insensitive" }
+        }
+
+        // Support fetching by Group/Source ID
+        if (sourceId) {
+            where.sourceId = sourceId
+        }
         const product = await prisma.product.create({
             data: {
                 userId: userId,

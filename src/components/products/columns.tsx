@@ -4,6 +4,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { MoreHorizontal, ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useState } from "react"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -23,6 +24,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Product } from "./schema"
+import { ProductSheet } from "./product-sheet"
+import { useState } from "react"
 
 export const columns: ColumnDef<Product>[] = [
     {
@@ -52,11 +55,16 @@ export const columns: ColumnDef<Product>[] = [
         header: "Sản phẩm",
         cell: ({ row }) => {
             const product = row.original
+            // eslint-disable-next-line react-hooks/rules-of-hooks
+            const [openSheet, setOpenSheet] = useState(false)
+
             // Only render Parent Info if this is the FIRST row of the group
             if (product.type !== 'first') return null
 
             return (
                 <div className="flex items-center gap-3 py-1">
+                    <ProductSheet product={product} open={openSheet} onOpenChange={setOpenSheet} />
+
                     <div className="h-10 w-10 rounded-md border bg-muted/50 overflow-hidden shrink-0">
                         <img
                             src={product.parentImage}
@@ -65,7 +73,7 @@ export const columns: ColumnDef<Product>[] = [
                         />
                     </div>
                     <div className="flex flex-col">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 cursor-pointer hover:underline" onClick={() => setOpenSheet(true)}>
                             <span className="font-semibold text-sm truncate max-w-[200px]" title={product.parentName}>
                                 {product.parentName}
                             </span>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -72,13 +72,16 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
         },
     })
 
+    // State for Variants
+    const [variants, setVariants] = useState<any[]>([])
+
     // Reset form when product changes
     useEffect(() => {
         if (product) {
             form.reset({
                 name: product.name,
                 sku: product.sku,
-                description: "", // Mock data doesn't have desc yet
+                description: "",
                 price: product.price,
                 stock: product.stock,
                 status: product.status,
@@ -88,7 +91,21 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
                     lazada: product.platforms.lazada || false,
                 }
             })
+
+            // FETCH VARIANTS
+            if (product.sourceId) {
+                fetch(`/api/products?sourceId=${product.sourceId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.products) setVariants(data.products)
+                    })
+                    .catch(e => console.error("Failed to fetch variants", e))
+            } else {
+                setVariants([product]) // Local product / No source ID
+            }
+
         } else {
+            setVariants([])
             form.reset({
                 name: "",
                 sku: "",
@@ -201,37 +218,51 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
                                 </TabsContent>
 
                                 <TabsContent value="variants" className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <FormField
-                                            control={form.control}
-                                            name="price"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Giá bán lẻ (VND)</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="number" {...field} />
-                                                    </FormControl>
-                                                    <FormDescription>Giá mặc định khi chưa cấu hình sàn.</FormDescription>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="stock"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Tồn kho tổng</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="number" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                                    <div className="rounded-md border">
+                                        <div className="grid grid-cols-12 gap-2 p-2 bg-muted/50 font-medium text-sm">
+                                            <div className="col-span-1">Img</div>
+                                            <div className="col-span-4">Phân loại</div>
+                                            <div className="col-span-3">Giá</div>
+                                            <div className="col-span-2">Kho</div>
+                                            <div className="col-span-2">SKU</div>
+                                        </div>
+                                        <ScrollArea className="h-[300px]">
+                                            <div className="flex flex-col">
+                                                {variants.length === 0 ? (
+                                                    <div className="p-4 text-center text-sm text-muted-foreground">
+                                                        Sản phẩm không có phân loại hoặc đang tải...
+                                                    </div>
+                                                ) : (
+                                                    variants.map((variant, index) => (
+                                                        <div key={variant.id} className="grid grid-cols-12 gap-2 p-2 border-b last:border-0 items-center text-sm">
+                                                            <div className="col-span-1 h-8 w-8 bg-muted rounded overflow-hidden">
+                                                                <img src={variant.images[0] || "/placeholder.png"} className="h-full w-full object-cover" />
+                                                            </div>
+                                                            <div className="col-span-4 font-medium truncate" title={variant.variantName}>
+                                                                {variant.variantName || variant.name}
+                                                            </div>
+                                                            <div className="col-span-3">
+                                                                <div className="text-xs text-muted-foreground line-through">
+                                                                    {variant.originalPrice ? Number(variant.originalPrice).toLocaleString() : ''}
+                                                                </div>
+                                                                <div className="font-mono text-red-600">
+                                                                    {Number(variant.promoPrice || variant.price).toLocaleString()}
+                                                                </div>
+                                                            </div>
+                                                            <div className="col-span-2">
+                                                                {variant.stock}
+                                                            </div>
+                                                            <div className="col-span-2 text-xs truncate" title={variant.sku}>
+                                                                {variant.sku}
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </ScrollArea>
                                     </div>
-                                    <div className="p-4 border rounded-md bg-muted/50 text-center text-sm text-muted-foreground">
-                                        Tính năng quản lý Biến thể (Size/Màu) nâng cao sẽ được cập nhật trong phiên bản sau.
+                                    <div className="p-2 border rounded-md bg-yellow-50 text-yellow-800 text-xs">
+                                        Lưu ý: Tính năng chỉnh sửa giá/kho đồng loạt đang được phát triển. Hiện tại vui lòng sửa trên sàn Shopee.
                                     </div>
                                 </TabsContent>
 
@@ -310,6 +341,6 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
                     </form>
                 </Form>
             </SheetContent>
-        </Sheet>
+        </Sheet >
     )
 }
