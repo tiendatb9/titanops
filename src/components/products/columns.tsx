@@ -25,7 +25,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Product } from "./schema"
 import { ProductSheet } from "./product-sheet"
-import { useState } from "react"
 
 export const columns: ColumnDef<Product>[] = [
     {
