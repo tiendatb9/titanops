@@ -1,5 +1,5 @@
 "use client"
-// Trigger Deploy: Improved Sidebar UX
+// Trigger Deploy: Retry Vercel Sync
 
 
 import { ChevronRight, type LucideIcon } from "lucide-react"
