@@ -79,6 +79,114 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
         },
     })
 
+    // --- STATE & LOGIC RE-INSERTED ---
+    const [variants, setVariants] = useState<any[]>([])
+    const [shopeeAttributes, setShopeeAttributes] = useState<any[]>([])
+    const [isLoadingAttributes, setIsLoadingAttributes] = useState(false)
+    const [categories, setCategories] = useState<any[]>([])
+    const [isLoadingCategories, setIsLoadingCategories] = useState(false)
+    const [fullProduct, setFullProduct] = useState<any>(null)
+
+    // Helper to fetch categories
+    const fetchCategories = async (shopId: string) => {
+        setIsLoadingCategories(true)
+        try {
+            const res = await fetch(`/api/shopee/categories?shopId=${shopId}`)
+            const data = await res.json()
+            if (data.response?.category_list) {
+                setCategories(data.response.category_list)
+            }
+        } catch (error) {
+            console.error("Failed to fetch categories", error)
+            toast.error("Lỗi tải danh mục Shopee")
+        } finally {
+            setIsLoadingCategories(false)
+        }
+    }
+
+    // Update Form when Category Changed
+    const handleCategorySelect = (categoryId: number) => {
+        if (product?.shopId) {
+            setIsLoadingAttributes(true)
+            fetch(`/api/shopee/attributes?shopId=${product.shopId}&categoryId=${categoryId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.response?.attribute_list) {
+                        setShopeeAttributes(data.response.attribute_list)
+                        toast.success("Đã cập nhật thuộc tính theo danh mục mới")
+                    }
+                })
+                .finally(() => setIsLoadingAttributes(false))
+        }
+    }
+
+    // Reset and Load Data
+    useEffect(() => {
+        if (product) {
+            // 1. Set Initial Basic Data
+            form.reset({
+                name: product.name,
+                sku: product.sku || "",
+                description: product.description || "",
+                price: Number(product.price) || 0,
+                stock: Number(product.stock) || 0,
+                status: product.status || "draft",
+                platforms: {
+                    shopee: product.platforms?.shopee || false,
+                    tiktok: product.platforms?.tiktok || false,
+                    lazada: product.platforms?.lazada || false,
+                }
+            })
+
+            // 2. Fetch Full Details (Description, Images, etc.)
+            if (product.id) {
+                fetch(`/api/products/${product.id}`)
+                    .then(res => res.json())
+                    .then(fullData => {
+                        if (fullData) {
+                            setFullProduct(fullData)
+                            form.setValue("description", fullData.description || "")
+                            // If we have images or other fields, set them here
+                            if (fullData.categoryId) {
+                                // If SKU has category, use it. Also trigger fetch attributes
+                                fetchCategories(product.shopId || "")
+                                handleCategorySelect(Number(fullData.categoryId))
+                            }
+                        }
+                    })
+                    .catch(e => console.error("Failed to fetch full details", e))
+            }
+
+            // Load Categories if Shop ID exists
+            if (product.shopId) {
+                fetchCategories(product.shopId)
+            }
+
+            // ... variant fetching ...
+            if (product.sourceId) {
+                fetch(`/api/products?sourceId=${product.sourceId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.products) setVariants(data.products)
+                    })
+            } else {
+                setVariants([product])
+            }
+
+            // ... attribute fetching ... (logic preserved)
+            if (product.shopId && product.categoryId) {
+                fetch(`/api/shopee/attributes?shopId=${product.shopId}&categoryId=${product.categoryId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.response?.attribute_list) {
+                            setShopeeAttributes(data.response.attribute_list)
+                        }
+                    })
+            }
+        }
+    }, [product, form, open])
+    // --- END STATE & LOGIC ---
+
     // State for Variants
     const [variants, setVariants] = useState<any[]>([])
     const [shopeeAttributes, setShopeeAttributes] = useState<any[]>([])
