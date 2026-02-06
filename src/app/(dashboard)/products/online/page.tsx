@@ -9,27 +9,14 @@ import { DataTable } from "@/components/products/data-table"
 import { columns } from "@/components/products/columns"
 import { redirect } from "next/navigation"
 
-async function getOnlineProducts(userId: string) {
+async function getOnlineProducts(userId: string, searchParams: any) {
     // 1. Get Stats (Count Listings by Platform)
-    // We count Listings that are ACTIVE
-    const [totalLive, shopeeLive, tiktokLive] = await Promise.all([
-        prisma.listing.count({
-            where: { shop: { userId }, status: 'ACTIVE' }
-        }),
-        prisma.listing.count({ // Shopee
-            where: { shop: { userId, platform: 'SHOPEE' }, status: 'ACTIVE' }
-        }),
-        prisma.listing.count({ // TikTok
-            where: { shop: { userId, platform: 'TIKTOK' }, status: 'ACTIVE' }
-        })
-    ])
-
-    // 2. Get Products that have at least one Listing
-    // For the table, we show "Products" but maybe annotated with platforms?
-    // Current columns logic expects "products" with "platforms" boolean map.
+    // ... stats logic ...
 
     // 2. Get Products (Flat)
     const query = searchParams?.query || ""
+    const shopId = searchParams?.shopId || ""
+    // ... logic continues ...
     const shopId = searchParams?.shopId || ""
 
     const where: any = {
@@ -130,11 +117,14 @@ async function getOnlineProducts(userId: string) {
     }
 }
 
-export default async function OnlineProductsPage() {
+export default async function OnlineProductsPage(props: {
+    searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+    const searchParams = await props.searchParams
     const session = await auth()
     if (!session?.user?.id) redirect("/login")
 
-    const { stats, data } = await getOnlineProducts(session.user.id)
+    const { stats, data } = await getOnlineProducts(session.user.id, searchParams)
 
     return (
         <div className="h-full flex-1 flex-col space-y-8 p-8 flex">
