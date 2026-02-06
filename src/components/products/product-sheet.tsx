@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Product } from "./schema"
@@ -29,6 +29,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
+import { Badge } from "@/components/ui/badge"
+import { Loader2, Plus, Trash2, Upload, AlertCircle } from "lucide-react"
+import { toast } from "sonner"
 
 const formSchema = z.object({
     name: z.string().min(2, {
@@ -74,21 +79,23 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
 
     // State for Variants
     const [variants, setVariants] = useState<any[]>([])
+    const [shopeeAttributes, setShopeeAttributes] = useState<any[]>([])
+    const [isLoadingAttributes, setIsLoadingAttributes] = useState(false)
 
     // Reset form when product changes
     useEffect(() => {
         if (product) {
             form.reset({
                 name: product.name,
-                sku: product.sku,
-                description: "",
-                price: product.price,
-                stock: product.stock,
-                status: product.status,
+                sku: product.sku || "",
+                description: product.description || "",
+                price: Number(product.price) || 0,
+                stock: Number(product.stock) || 0,
+                status: product.status || "draft",
                 platforms: {
-                    shopee: product.platforms.shopee || false,
-                    tiktok: product.platforms.tiktok || false,
-                    lazada: product.platforms.lazada || false,
+                    shopee: product.platforms?.shopee || false,
+                    tiktok: product.platforms?.tiktok || false,
+                    lazada: product.platforms?.lazada || false,
                 }
             })
 
@@ -104,8 +111,28 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
                 setVariants([product]) // Local product / No source ID
             }
 
+            // FETCH ATTRIBUTES (If Shop & Category exist)
+            // Assuming product has categoryId and shopId. 
+            // If not available in 'product' schema, we might need to fetch detailed info or pass it.
+            // For now, let's try to fetch if we have categoryId.
+            // Note: The schema 'Product' might not have categoryId at root level if it's not in the view model. 
+            // But let's assume it might or we use a fallback.
+            // If the real categoryId is missing, we can't fetch. 
+            if (product.shopId && product.categoryId) {
+                setIsLoadingAttributes(true)
+                fetch(`/api/shopee/attributes?shopId=${product.shopId}&categoryId=${product.categoryId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.response?.attribute_list) {
+                            setShopeeAttributes(data.response.attribute_list)
+                        }
+                    })
+                    .finally(() => setIsLoadingAttributes(false))
+            }
+
         } else {
             setVariants([])
+            setShopeeAttributes([])
             form.reset({
                 name: "",
                 sku: "",
@@ -139,13 +166,15 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 flex-1 flex flex-col min-h-0">
                         <ScrollArea className="flex-1 px-6">
                             <Tabs defaultValue="general" className="w-full">
-                                <TabsList className="grid w-full grid-cols-3 mb-4">
-                                    <TabsTrigger value="general">Thông tin chung</TabsTrigger>
-                                    <TabsTrigger value="variants">Biến thể & Giá</TabsTrigger>
-                                    <TabsTrigger value="platforms">Cấu hình Sàn</TabsTrigger>
+                                <TabsList className="grid w-full grid-cols-5">
+                                    <TabsTrigger value="general">Thông tin</TabsTrigger>
+                                    <TabsTrigger value="images">Hình ảnh</TabsTrigger>
+                                    <TabsTrigger value="attributes">Thuộc tính</TabsTrigger>
+                                    <TabsTrigger value="variants">Phân loại</TabsTrigger>
+                                    <TabsTrigger value="shipping">Vận chuyển</TabsTrigger>
                                 </TabsList>
 
-                                <TabsContent value="general" className="space-y-4">
+                                <TabsContent value="general" className="space-y-4 pt-4">
                                     <FormField
                                         control={form.control}
                                         name="name"
@@ -166,9 +195,9 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
                                             name="sku"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>SKU (Mã quản lý)</FormLabel>
+                                                    <FormLabel>Mã sản phẩm (SKU)</FormLabel>
                                                     <FormControl>
-                                                        <Input placeholder="VD: AO-001" {...field} />
+                                                        <Input placeholder="SKU-..." {...field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
@@ -207,7 +236,7 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
                                                 <FormControl>
                                                     <Textarea
                                                         placeholder="Mô tả sản phẩm..."
-                                                        className="min-h-[150px]"
+                                                        className="min-h-[200px]"
                                                         {...field}
                                                     />
                                                 </FormControl>
@@ -217,7 +246,65 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
                                     />
                                 </TabsContent>
 
-                                <TabsContent value="variants" className="space-y-4">
+                                <TabsContent value="images" className="space-y-4 pt-4">
+                                    <div className="flex flex-wrap gap-4">
+                                        {product?.images && product.images.length > 0 ? (
+                                            product.images.map((img: string, i: number) => (
+                                                <div key={i} className="relative h-24 w-24 rounded-md overflow-hidden border group">
+                                                    <img src={img} alt={`Product ${i}`} className="h-full w-full object-cover" />
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-sm text-muted-foreground">Chưa có hình ảnh.</div>
+                                        )}
+                                        <div className="h-24 w-24 rounded-md border border-dashed flex items-center justify-center cursor-pointer hover:bg-muted/50">
+                                            <Plus className="h-6 w-6 text-muted-foreground" />
+                                        </div>
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent value="attributes" className="space-y-4 pt-4">
+                                    {isLoadingAttributes ? (
+                                        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                                    ) : shopeeAttributes.length > 0 ? (
+                                        <ScrollArea className="h-[400px] pr-4">
+                                            <div className="space-y-4">
+                                                {shopeeAttributes.map((attr: any) => (
+                                                    <div key={attr.attribute_id} className="grid grid-cols-1 gap-2">
+                                                        <Label className="text-sm font-medium">
+                                                            {attr.original_attribute_name}
+                                                            {attr.is_mandatory && <span className="text-red-500 ml-1">*</span>}
+                                                        </Label>
+                                                        {attr.input_type === 'DROP_DOWN' || attr.input_type === 'COMBO_BOX' ? (
+                                                            <Select>
+                                                                <SelectTrigger>
+                                                                    <SelectValue placeholder={`Chọn ${attr.original_attribute_name}`} />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {attr.attribute_value_list?.map((val: any) => (
+                                                                        <SelectItem key={val.value_id} value={String(val.value_id)}>
+                                                                            {val.original_value_name}
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        ) : (
+                                                            <Input placeholder={`Nhập ${attr.original_attribute_name}...`} />
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
+                                    ) : (
+                                        <div className="text-center py-8 text-muted-foreground text-sm">
+                                            <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                            <p>Không tìm thấy thuộc tính sàn.</p>
+                                            <p className="text-xs">Vui lòng đảm bảo sản phẩm đã chọn đúng Danh mục Shopee.</p>
+                                        </div>
+                                    )}
+                                </TabsContent>
+
+                                <TabsContent value="variants" className="space-y-4 pt-4">
                                     <div className="rounded-md border">
                                         <div className="grid grid-cols-12 gap-2 p-2 bg-muted/50 font-medium text-sm">
                                             <div className="col-span-1">Img</div>
@@ -261,86 +348,113 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
                                             </div>
                                         </ScrollArea>
                                     </div>
-                                    <div className="p-2 border rounded-md bg-yellow-50 text-yellow-800 text-xs">
-                                        Lưu ý: Tính năng chỉnh sửa giá/kho đồng loạt đang được phát triển. Hiện tại vui lòng sửa trên sàn Shopee.
+                                    <div className="p-2 border rounded-md bg-yellow-50 text-yellow-800 text-xs mt-2">
+                                        Lưu ý: Tính năng chỉnh sửa giá/kho đồng loạt đang được phát triển.
                                     </div>
                                 </TabsContent>
 
-                                <TabsContent value="platforms" className="space-y-4">
-                                    <div className="space-y-4">
-                                        <FormField
-                                            control={form.control}
-                                            name="platforms.shopee"
-                                            render={({ field }) => (
-                                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                                    <div className="space-y-0.5">
-                                                        <FormLabel className="text-base">Shopee</FormLabel>
-                                                        <FormDescription>
-                                                            Đăng và đồng bộ sản phẩm lên Shopee.
-                                                        </FormDescription>
-                                                    </div>
-                                                    <FormControl>
-                                                        <Switch
-                                                            checked={field.value}
-                                                            onCheckedChange={field.onChange}
-                                                        />
-                                                    </FormControl>
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="platforms.tiktok"
-                                            render={({ field }) => (
-                                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                                    <div className="space-y-0.5">
-                                                        <FormLabel className="text-base">TikTok Shop</FormLabel>
-                                                        <FormDescription>
-                                                            Đăng và đồng bộ sản phẩm lên TikTok.
-                                                        </FormDescription>
-                                                    </div>
-                                                    <FormControl>
-                                                        <Switch
-                                                            checked={field.value}
-                                                            onCheckedChange={field.onChange}
-                                                        />
-                                                    </FormControl>
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="platforms.lazada"
-                                            render={({ field }) => (
-                                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                                    <div className="space-y-0.5">
-                                                        <FormLabel className="text-base">Lazada</FormLabel>
-                                                        <FormDescription>
-                                                            Kênh bán hàng Lazada (Sắp ra mắt).
-                                                        </FormDescription>
-                                                    </div>
-                                                    <FormControl>
-                                                        <Switch
-                                                            checked={field.value}
-                                                            onCheckedChange={field.onChange}
-                                                            disabled
-                                                        />
-                                                    </FormControl>
-                                                </FormItem>
-                                            )}
-                                        />
+                                <TabsContent value="shipping" className="space-y-4 pt-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Cân nặng (g)</Label>
+                                            <Input type="number" placeholder="500" value={product?.weight || 500} disabled />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Thời gian chuẩn bị (ngày)</Label>
+                                            <Input type="number" placeholder="2" value={product?.daysToShip || 2} disabled />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">Dài (cm)</Label>
+                                            <Input type="number" placeholder="10" disabled />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">Rộng (cm)</Label>
+                                            <Input type="number" placeholder="10" disabled />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">Cao (cm)</Label>
+                                            <Input type="number" placeholder="5" disabled />
+                                        </div>
                                     </div>
                                 </TabsContent>
                             </Tabs>
-                        </ScrollArea>
+                            <TabsContent value="platforms" className="space-y-4">
+                                <div className="space-y-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="platforms.shopee"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                                <div className="space-y-0.5">
+                                                    <FormLabel className="text-base">Shopee</FormLabel>
+                                                    <FormDescription>
+                                                        Đăng và đồng bộ sản phẩm lên Shopee.
+                                                    </FormDescription>
+                                                </div>
+                                                <FormControl>
+                                                    <Switch
+                                                        checked={field.value}
+                                                        onCheckedChange={field.onChange}
+                                                    />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="platforms.tiktok"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                                <div className="space-y-0.5">
+                                                    <FormLabel className="text-base">TikTok Shop</FormLabel>
+                                                    <FormDescription>
+                                                        Đăng và đồng bộ sản phẩm lên TikTok.
+                                                    </FormDescription>
+                                                </div>
+                                                <FormControl>
+                                                    <Switch
+                                                        checked={field.value}
+                                                        onCheckedChange={field.onChange}
+                                                    />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="platforms.lazada"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                                <div className="space-y-0.5">
+                                                    <FormLabel className="text-base">Lazada</FormLabel>
+                                                    <FormDescription>
+                                                        Kênh bán hàng Lazada (Sắp ra mắt).
+                                                    </FormDescription>
+                                                </div>
+                                                <FormControl>
+                                                    <Switch
+                                                        checked={field.value}
+                                                        onCheckedChange={field.onChange}
+                                                        disabled
+                                                    />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </TabsContent>
+                        </Tabs>
+                    </ScrollArea>
 
-                        <SheetFooter className="p-6 pt-2 border-t mt-auto">
-                            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Hủy bỏ</Button>
-                            <Button type="submit">Lưu thay đổi</Button>
-                        </SheetFooter>
-                    </form>
-                </Form>
-            </SheetContent>
+                    <SheetFooter className="p-6 pt-2 border-t mt-auto">
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Hủy bỏ</Button>
+                        <Button type="submit">Lưu thay đổi</Button>
+                    </SheetFooter>
+                </form>
+            </Form>
+        </SheetContent>
         </Sheet >
     )
 }
