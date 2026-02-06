@@ -37,93 +37,23 @@ import { toast } from "sonner"
 
 import { CategoryCascader } from "./category-cascader"
 
-// ... inside ProductSheet component ...
-
-const [variants, setVariants] = useState<any[]>([])
-const [shopeeAttributes, setShopeeAttributes] = useState<any[]>([])
-const [isLoadingAttributes, setIsLoadingAttributes] = useState(false)
-const [categories, setCategories] = useState<any[]>([])
-const [isLoadingCategories, setIsLoadingCategories] = useState(false)
-
-// Helper to fetch categories
-const fetchCategories = async (shopId: string) => {
-    setIsLoadingCategories(true)
-    try {
-        const res = await fetch(`/api/shopee/categories?shopId=${shopId}`)
-        const data = await res.json()
-        if (data.response?.category_list) {
-            // Shopee returns flat list, CategoryCascader handles hierarchy if data structure matches
-            // Shopee V2 returns: { category_id, parent_category_id, original_category_name, display_category_name, has_children }
-            setCategories(data.response.category_list)
-        }
-    } catch (error) {
-        console.error("Failed to fetch categories", error)
-        toast.error("Lỗi tải danh mục Shopee")
-    } finally {
-        setIsLoadingCategories(false)
-    }
-}
-
-// Reset and Load Data
-useEffect(() => {
-    if (product) {
-        form.reset({
-            // ... fields ...
-            name: product.name,
-            sku: product.sku || "",
-            description: product.description || "",
-            price: Number(product.price) || 0,
-            stock: Number(product.stock) || 0,
-            status: product.status || "draft",
-            platforms: {
-                shopee: product.platforms?.shopee || false,
-                tiktok: product.platforms?.tiktok || false,
-                lazada: product.platforms?.lazada || false,
-            }
-        })
-
-        // Load Categories if Shop ID exists
-        if (product.shopId) {
-            fetchCategories(product.shopId)
-        }
-
-        // ... variant fetching ...
-        if (product.sourceId) {
-            // ...
-        } else {
-            setVariants([product])
-        }
-
-        // ... attribute fetching ... (logic preserved)
-        if (product.shopId && product.categoryId) {
-            // ...
-        }
-    }
-    // ...
-}, [product, form, open])
-
-// Update Form when Category Changed
-const handleCategorySelect = (categoryId: number) => {
-    // Need to update 'product' state or form state?
-    // Schema doesn't have categoryId yet? Wait, I added it to Schema.
-    // But the FORM SCHEMA (zod) in this file needs it too.
-    // And we should trigger Attribute Refresh on change.
-
-    // TODO: Update local visual state for category ID? 
-    // For now, let's just trigger Attribute Fetch.
-    if (product?.shopId) {
-        setIsLoadingAttributes(true)
-        fetch(`/api/shopee/attributes?shopId=${product.shopId}&categoryId=${categoryId}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.response?.attribute_list) {
-                    setShopeeAttributes(data.response.attribute_list)
-                    toast.success("Đã cập nhật thuộc tính theo danh mục mới")
-                }
-            })
-            .finally(() => setIsLoadingAttributes(false))
-    }
-}
+const formSchema = z.object({
+    name: z.string().min(2, {
+        message: "Tên sản phẩm phải có ít nhất 2 ký tự.",
+    }),
+    sku: z.string().min(1, {
+        message: "SKU không được để trống.",
+    }),
+    description: z.string().optional(),
+    price: z.coerce.number().min(0),
+    stock: z.coerce.number().int().min(0),
+    status: z.enum(["active", "draft", "archived"]),
+    platforms: z.object({
+        shopee: z.boolean().default(false),
+        tiktok: z.boolean().default(false),
+        lazada: z.boolean().default(false),
+    })
+})
 
 type ProductSheetProps = {
     product?: Product | null

@@ -31,7 +31,7 @@ export async function GET(req: Request) {
         // 3. Call Shopee API
         // Assuming getCategoryList is static like getAttributes.
         // If not, we'll fix it. Based on attributes route, it seems static methods are used.
-        const res = await ShopeeClient.getCategoryList(Number(shop.platformShopId), accessToken)
+        const res = await ShopeeClient.getCategoryList(accessToken, Number(shop.platformShopId))
 
         if (res.error) {
             return NextResponse.json({ error: res.message || "Shopee API Error" }, { status: 500 })
