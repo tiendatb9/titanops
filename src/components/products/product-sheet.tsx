@@ -154,7 +154,7 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="w-[800px] sm:w-[540px] md:w-[700px] p-0 flex flex-col">
+            <SheetContent className="min-w-[90vw] sm:min-w-[800px] p-0 flex flex-col">
                 <SheetHeader className="p-6 pb-2">
                     <SheetTitle>{product ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}</SheetTitle>
                     <SheetDescription>
