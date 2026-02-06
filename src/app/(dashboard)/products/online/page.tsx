@@ -16,8 +16,6 @@ async function getOnlineProducts(userId: string, searchParams: any) {
     // 2. Get Products (Flat)
     const query = searchParams?.query || ""
     const shopId = searchParams?.shopId || ""
-    // ... logic continues ...
-    const shopId = searchParams?.shopId || ""
 
     const where: any = {
         userId: userId, // Use the passed userId
