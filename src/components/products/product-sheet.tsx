@@ -379,82 +379,81 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
                                         </div>
                                     </div>
                                 </TabsContent>
+                                <TabsContent value="platforms" className="space-y-4">
+                                    <div className="space-y-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="platforms.shopee"
+                                            render={({ field }) => (
+                                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                                    <div className="space-y-0.5">
+                                                        <FormLabel className="text-base">Shopee</FormLabel>
+                                                        <FormDescription>
+                                                            Đăng và đồng bộ sản phẩm lên Shopee.
+                                                        </FormDescription>
+                                                    </div>
+                                                    <FormControl>
+                                                        <Switch
+                                                            checked={field.value}
+                                                            onCheckedChange={field.onChange}
+                                                        />
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="platforms.tiktok"
+                                            render={({ field }) => (
+                                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                                    <div className="space-y-0.5">
+                                                        <FormLabel className="text-base">TikTok Shop</FormLabel>
+                                                        <FormDescription>
+                                                            Đăng và đồng bộ sản phẩm lên TikTok.
+                                                        </FormDescription>
+                                                    </div>
+                                                    <FormControl>
+                                                        <Switch
+                                                            checked={field.value}
+                                                            onCheckedChange={field.onChange}
+                                                        />
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="platforms.lazada"
+                                            render={({ field }) => (
+                                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                                    <div className="space-y-0.5">
+                                                        <FormLabel className="text-base">Lazada</FormLabel>
+                                                        <FormDescription>
+                                                            Kênh bán hàng Lazada (Sắp ra mắt).
+                                                        </FormDescription>
+                                                    </div>
+                                                    <FormControl>
+                                                        <Switch
+                                                            checked={field.value}
+                                                            onCheckedChange={field.onChange}
+                                                            disabled
+                                                        />
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                </TabsContent>
                             </Tabs>
-                            <TabsContent value="platforms" className="space-y-4">
-                                <div className="space-y-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="platforms.shopee"
-                                        render={({ field }) => (
-                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                                <div className="space-y-0.5">
-                                                    <FormLabel className="text-base">Shopee</FormLabel>
-                                                    <FormDescription>
-                                                        Đăng và đồng bộ sản phẩm lên Shopee.
-                                                    </FormDescription>
-                                                </div>
-                                                <FormControl>
-                                                    <Switch
-                                                        checked={field.value}
-                                                        onCheckedChange={field.onChange}
-                                                    />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="platforms.tiktok"
-                                        render={({ field }) => (
-                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                                <div className="space-y-0.5">
-                                                    <FormLabel className="text-base">TikTok Shop</FormLabel>
-                                                    <FormDescription>
-                                                        Đăng và đồng bộ sản phẩm lên TikTok.
-                                                    </FormDescription>
-                                                </div>
-                                                <FormControl>
-                                                    <Switch
-                                                        checked={field.value}
-                                                        onCheckedChange={field.onChange}
-                                                    />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="platforms.lazada"
-                                        render={({ field }) => (
-                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                                <div className="space-y-0.5">
-                                                    <FormLabel className="text-base">Lazada</FormLabel>
-                                                    <FormDescription>
-                                                        Kênh bán hàng Lazada (Sắp ra mắt).
-                                                    </FormDescription>
-                                                </div>
-                                                <FormControl>
-                                                    <Switch
-                                                        checked={field.value}
-                                                        onCheckedChange={field.onChange}
-                                                        disabled
-                                                    />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-                            </TabsContent>
-                        </Tabs>
-                    </ScrollArea>
+                        </ScrollArea>
 
-                    <SheetFooter className="p-6 pt-2 border-t mt-auto">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Hủy bỏ</Button>
-                        <Button type="submit">Lưu thay đổi</Button>
-                    </SheetFooter>
-                </form>
-            </Form>
-        </SheetContent>
+                        <SheetFooter className="p-6 pt-2 border-t mt-auto">
+                            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Hủy bỏ</Button>
+                            <Button type="submit">Lưu thay đổi</Button>
+                        </SheetFooter>
+                    </form>
+                </Form>
+            </SheetContent>
         </Sheet >
     )
 }
