@@ -12,7 +12,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     const { id } = await params
 
     // Fetch Single Product (Flat) without variants relation
-    const product = await prisma.product.findUnique({
+    let product = await prisma.product.findUnique({
         where: { id: id, userId: session.user.id },
         include: {
             listings: {
@@ -20,6 +20,18 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
             }
         }
     })
+
+    // Fallback: Try searching by sourceId (Shopee Item ID) if not found by UUID
+    if (!product) {
+        product = await prisma.product.findFirst({
+            where: { sourceId: id, userId: session.user.id },
+            include: {
+                listings: {
+                    include: { shop: true }
+                }
+            }
+        })
+    }
 
     if (!product) notFound()
 
