@@ -29,9 +29,44 @@ async function getOnlineProducts(userId: string) {
     // Current columns logic expects "products" with "platforms" boolean map.
 
     // 2. Get Products (Flat)
+    const query = searchParams?.query || ""
+    const shopId = searchParams?.shopId || ""
+
+    const where: any = {
+        userId: userId, // Use the passed userId
+        // Only fetch valid source products (Online)
+        source: { not: null },
+        // Excluding "deleted" if needed, or handled by platformStatus
+    }
+
+    if (query) {
+        where.OR = [
+            { name: { contains: query, mode: "insensitive" } },
+            { sku: { contains: query, mode: "insensitive" } },
+            { variantName: { contains: query, mode: "insensitive" } },
+            // Also search by Source ID (Item ID)
+            { sourceId: { contains: query } }
+        ]
+    }
+
+    if (shopId && shopId !== "all") {
+        // Need to filter by shop. 
+        // Product doesn't have shopId directly, it has Listings.
+        // But for simplicity/performance in this flat view, we might filter by listings?
+        // Or if 'source' implies shop? No.
+        where.listings = {
+            some: {
+                shopId: shopId
+            }
+        }
+    }
+
     const products = await prisma.product.findMany({
-        where: { userId },
-        orderBy: { updatedAt: 'desc' }
+        where,
+        orderBy: { updatedAt: 'desc' },
+        include: {
+            listings: true // Include listings to check shop logic if needed
+        }
     })
 
     // Grouping Logic
