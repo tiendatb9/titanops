@@ -177,20 +177,6 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
                                 </TabsList>
 
                                 <TabsContent value="general" className="space-y-4 pt-4">
-                                    <div className="space-y-2">
-                                        <Label>Danh mục Shopee</Label>
-                                        <CategoryCascader
-                                            categories={categories}
-                                            value={product?.categoryId ? Number(product.categoryId) : undefined}
-                                            onSelect={handleCategorySelect}
-                                            width="w-full"
-                                        />
-                                        {product?.categoryId && (
-                                            <p className="text-[11px] text-muted-foreground">
-                                                ID: {product.categoryId}
-                                            </p>
-                                        )}
-                                    </div>
                                     <FormField
                                         control={form.control}
                                         name="name"
