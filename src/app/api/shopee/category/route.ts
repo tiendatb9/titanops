@@ -1,4 +1,3 @@
-```typescript
 import { NextRequest, NextResponse } from "next/server"
 import { ShopeeClient } from "@/lib/shopee"
 import { auth } from "@/lib/auth"
