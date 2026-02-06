@@ -64,8 +64,8 @@ async function getOnlineProducts(userId: string) {
                 ...parentInfo,
 
                 // Variant Info
-                name: p.name, // Usually redundant if same as parent, but keep
-                variantName: p.variantName || "Mặc định",
+                name: p.name,
+                variantName: p.variantName || "", // Keep empty if no variant name
                 sku: p.sku || "",
                 variantId: p.sourceSkuId || p.sourceId, // Use Source Sku ID preferred
 
