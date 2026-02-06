@@ -9,6 +9,11 @@ export type Product = {
     variantName?: string
     sku: string
     image: string
+    images?: string[]
+    description?: string | null
+    shopId?: string | null
+    categoryId?: string | null
+    weight?: number
     price: number
     stock: number
     status: "active" | "draft" | "archived"
