@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth"
 import { DataTable } from "@/components/products/data-table"
 import { columns } from "@/components/products/columns"
 import { redirect } from "next/navigation"
+import { SearchInput } from "@/components/search-input"
 
 async function getOnlineProducts(userId: string, searchParams: any) {
     // 1. Get Stats (Count Listings by Platform)
