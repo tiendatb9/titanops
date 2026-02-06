@@ -1,0 +1,46 @@
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+import { ShopeeClient } from "@/lib/shopee"
+import { ShopeeAuthService } from "@/lib/services/shopee-auth"
+import { NextResponse } from "next/server"
+
+export async function GET(req: Request) {
+    const session = await auth()
+    if (!session?.user?.id) return new NextResponse("Unauthorized", { status: 401 })
+
+    const { searchParams } = new URL(req.url)
+    const shopId = searchParams.get("shopId")
+
+    if (!shopId) {
+        return new NextResponse("Missing shopId", { status: 400 })
+    }
+
+    try {
+        // 1. Get Access Token
+        const accessToken = await ShopeeAuthService.getValidAccessToken(shopId)
+
+        // 2. Get Shop (Platform ID)
+        const shop = await prisma.shop.findUnique({
+            where: { id: shopId }
+        })
+
+        if (!shop || !shop.platformShopId) {
+            return new NextResponse("Shop not valid", { status: 400 })
+        }
+
+        // 3. Call Shopee API
+        // Assuming getCategoryList is static like getAttributes.
+        // If not, we'll fix it. Based on attributes route, it seems static methods are used.
+        const res = await ShopeeClient.getCategoryList(Number(shop.platformShopId), accessToken)
+
+        if (res.error) {
+            return NextResponse.json({ error: res.message || "Shopee API Error" }, { status: 500 })
+        }
+
+        return NextResponse.json(res.response || {})
+
+    } catch (error) {
+        console.error("[SHOPEE_CATS]", error)
+        return new NextResponse("Internal Error", { status: 500 })
+    }
+}
