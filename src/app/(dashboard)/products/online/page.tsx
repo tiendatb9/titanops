@@ -46,48 +46,39 @@ async function getOnlineProducts(userId: string) {
 
     grouped.forEach((variants, key) => {
         const first = variants[0]
+        const parentInfo = {
+            parentName: first.name,
+            parentImage: first.images[0] || "/placeholder.png",
+            parentId: first.sourceId,
+            sourceUrl: first.sourceUrl
+        }
 
-        // 1. Push PARENT Row
-        formattedProducts.push({
-            id: `parent_${first.id}`, // Unique ID for parent
-            type: 'parent',
-            name: first.name,
-            variantName: undefined,
-            sku: `${variants.length} phân loại`, // Summary
-
-            price: 0, // Parent doesn't show price
-            stock: 0, // Parent doesn't show stock
-
-            status: (first.status === 'ACTIVE' ? 'active' : 'draft') as "active" | "draft" | "archived",
-            image: first.images[0] || "/placeholder.png",
-            platforms: { shopee: true, tiktok: false, lazada: false },
-
-            rawJson: first.rawJson,
-            sourceId: first.sourceId,
-            sourceUrl: first.sourceUrl,
-            variants: []
-        })
-
-        // 2. Push VARIANT Rows
-        variants.forEach(p => {
+        // Push VARIANT Rows directly (No separate Parent Row)
+        variants.forEach((p, index) => {
+            const isFirst = index === 0
             formattedProducts.push({
                 id: p.id,
-                type: 'variant',
-                name: p.name, // Will function as Parent Name in columns if not careful, need to distinct
+                type: isFirst ? 'first' : 'sub', // Logic for Column Rendering
+
+                // Inherit Parent Info
+                ...parentInfo,
+
+                // Variant Info
+                name: p.name, // Usually redundant if same as parent, but keep
                 variantName: p.variantName || "Mặc định",
                 sku: p.sku || "",
+                variantId: p.sourceSkuId || p.sourceId, // Use Source Sku ID preferred
 
                 price: Number(p.price),
                 stock: p.stock,
 
                 status: (p.status === 'ACTIVE' ? 'active' : 'draft') as "active" | "draft" | "archived",
-                image: p.images[0] || "/placeholder.png", // Variant Image
+                image: p.images[0] || "/placeholder.png",
                 platforms: { shopee: true, tiktok: false, lazada: false },
 
                 rawJson: p.rawJson,
                 sourceId: p.sourceId,
-                sourceUrl: p.sourceUrl,
-
+                // ... props
                 originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
                 promoPrice: p.promoPrice ? Number(p.promoPrice) : undefined,
                 promoId: p.promoId || undefined,

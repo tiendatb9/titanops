@@ -49,51 +49,51 @@ export const columns: ColumnDef<Product>[] = [
     },
     {
         accessorKey: "name",
-        header: "Sản phẩm (ID / SKU)",
+        header: "Sản phẩm",
         cell: ({ row }) => {
             const product = row.original
-            const isParent = product.type === 'parent'
+            // Only render Parent Info if this is the FIRST row of the group
+            if (product.type !== 'first') return null
 
-            if (isParent) {
-                return (
-                    <div className="flex items-center gap-3 py-1">
-                        <div className="h-10 w-10 rounded-md border bg-muted/50 overflow-hidden shrink-0">
-                            <img
-                                src={product.image}
-                                alt={product.name}
-                                className="h-full w-full object-cover"
-                            />
-                        </div>
-                        <div className="flex flex-col">
-                            <div className="flex items-center gap-1">
-                                <span className="font-semibold text-sm truncate max-w-[300px]" title={product.name}>
-                                    {product.name}
-                                </span>
-                                {product.sourceUrl && (
-                                    <a href={product.sourceUrl} target="_blank" className="text-muted-foreground hover:text-blue-600">
-                                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                        </svg>
-                                    </a>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-2 mt-0.5">
-                                {product.sourceId && (
-                                    <span className="text-[10px] text-blue-600 bg-blue-50 px-1 rounded border border-blue-100" title="Item ID">
-                                        ID: {product.sourceId}
-                                    </span>
-                                )}
-                                <span className="text-[10px] text-muted-foreground">{product.sku}</span>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
-
-            // Variant Row
             return (
-                <div className="flex items-center gap-3 pl-8 relative"> {/* Indent */}
-                    {/* Tree connector line can be added via CSS if needed, for now just padding */}
+                <div className="flex items-center gap-3 py-1">
+                    <div className="h-10 w-10 rounded-md border bg-muted/50 overflow-hidden shrink-0">
+                        <img
+                            src={product.parentImage}
+                            alt={product.parentName}
+                            className="h-full w-full object-cover"
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-1">
+                            <span className="font-semibold text-sm truncate max-w-[200px]" title={product.parentName}>
+                                {product.parentName}
+                            </span>
+                            {product.sourceUrl && (
+                                <a href={product.sourceUrl} target="_blank" className="text-muted-foreground hover:text-blue-600">
+                                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                </a>
+                            )}
+                        </div>
+                        {product.parentId && (
+                            <span className="text-[10px] text-blue-600 bg-blue-50 px-1 rounded border border-blue-100 w-fit mt-1" title="Item ID">
+                                ID: {product.parentId}
+                            </span>
+                        )}
+                    </div>
+                </div>
+            )
+        },
+    },
+    {
+        accessorKey: "sku", // Use SKU or create a new logical column
+        header: "Phân loại / SKU",
+        cell: ({ row }) => {
+            const product = row.original
+            return (
+                <div className="flex items-center gap-3">
                     <div className="h-8 w-8 rounded border bg-muted/50 overflow-hidden shrink-0">
                         <img
                             src={product.image}
@@ -103,44 +103,48 @@ export const columns: ColumnDef<Product>[] = [
                     </div>
                     <div className="flex flex-col max-w-[220px]">
                         <div className="text-xs font-medium text-purple-700">
-                            pl: {product.variantName}
+                            {product.variantName}
                         </div>
                         <div className="flex flex-col gap-0.5 mt-0.5">
                             <span className="text-[10px] text-muted-foreground">SKU: {product.sku}</span>
                             <div className="flex gap-1">
-                                <span className="text-[10px] text-gray-500 bg-gray-50 px-1 rounded border border-gray-100" title="Variant ID">ID: {product.id}</span>
+                                <span className="text-[10px] text-gray-500 bg-gray-50 px-1 rounded border border-gray-100" title="Variant ID">ID: {product.variantId}</span>
                             </div>
                         </div>
                     </div>
                 </div>
             )
-        },
+        }
     },
     {
         accessorKey: "price",
-        header: "Giá bán",
-        cell: ({ row }) => {
-            const p = row.original
+        header: ({ column }) => {
             return (
-                <div className="flex flex-col justify-center">
-                    {p.originalPrice && p.originalPrice > p.price && (
-                        <span className="text-[10px] text-muted-foreground line-through">
-                            {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(p.originalPrice)}
-                        </span>
-                    )}
-                    <span className="text-sm font-semibold text-red-600">
-                        {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(p.price)}
-                    </span>
-                    {p.promoId && <span className="text-[9px] text-green-600">KM: {p.promoId}</span>}
-                </div>
+                <Button
+                    variant="ghost"
+                    onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                >
+                    Giá bán
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
             )
-        }
+        },
+        cell: ({ row }) => {
+            const price = parseFloat(row.getValue("price"))
+            const formatted = new Intl.NumberFormat("vi-VN", {
+                style: "currency",
+                currency: "VND",
+            }).format(price)
+
+            return (
+                <div className="text-red-500 font-medium">{formatted}</div>
+            )
+        },
     },
     {
         accessorKey: "stock",
         header: "Kho",
         cell: ({ row }) => {
-            if (row.original.type === 'parent') return null
             return <div className="font-medium">{row.getValue("stock")}</div>
         },
     },
