@@ -88,8 +88,8 @@ export default async function OnlineProductsPage() {
             <div className="flex items-center justify-between space-y-2">
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight">Sản phẩm Online</h2>
-                    <p className="text-muted-foreground">
-                        Quản lý và đồng bộ sản phẩm đang hiển thị thực tế trên các sàn (Shopee, TikTok, Lazada).
+                    <p className="text-muted-foreground mt-1">
+                        Quản lý và đồng bộ sản phẩm đang hiển thị thực tế trên các sàn.
                     </p>
                 </div>
                 <div className="flex items-center space-x-2">
