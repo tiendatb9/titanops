@@ -11,7 +11,18 @@ import { redirect } from "next/navigation"
 
 async function getOnlineProducts(userId: string, searchParams: any) {
     // 1. Get Stats (Count Listings by Platform)
-    // ... stats logic ...
+    // We count Listings that are ACTIVE
+    const [totalLive, shopeeLive, tiktokLive] = await Promise.all([
+        prisma.listing.count({
+            where: { shop: { userId }, status: 'ACTIVE' }
+        }),
+        prisma.listing.count({ // Shopee
+            where: { shop: { userId, platform: 'SHOPEE' }, status: 'ACTIVE' }
+        }),
+        prisma.listing.count({ // TikTok
+            where: { shop: { userId, platform: 'TIKTOK' }, status: 'ACTIVE' }
+        })
+    ])
 
     // 2. Get Products (Flat)
     const query = searchParams?.query || ""
