@@ -23,9 +23,25 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
     if (!product) notFound()
 
-    // Flat Architecture: No children logic for now in this view
-    const children: any[] = []
-    const hasVariants = false
+    // Fetch Siblings/Variants (Flat Architecture: Group by sourceId)
+    // If product has sourceId, fetch all products with same sourceId
+    let variants: any[] = []
+    let children: any[] = []
+
+    if (product.sourceId) {
+        children = await prisma.product.findMany({
+            where: {
+                sourceId: product.sourceId,
+                id: { not: product.id } // Exclude self if needed, or include? 
+                // Listing all variants including self is usually better for the grid, 
+                // but 'product' is the main form data. 
+                // Let's exclude self for now to avoid duplication in variants list if Builder handles it.
+            },
+            orderBy: { sku: 'asc' }
+        })
+    }
+
+    const hasVariants = children.length > 0
 
     // Extract Unique Channels (Shops) from Listings
     const channelMap = new Map<string, { shopId: string, shopName: string, platform: any, platformItemId: string }>()
@@ -69,7 +85,17 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
         variationTiers: [],
 
-        variants: [],
+        // Map children to builder variants format
+        variants: children.map(child => ({
+            id: child.id,
+            name: child.variantName || child.name,
+            price: Number(child.price),
+            stock: child.stock,
+            sku: child.sku || "",
+            image: child.images[0] || "",
+            options: [], // Placeholder as we don't have parsed options
+            tierIndices: [] // Placeholder
+        })),
 
         // Single Product Mode values
         price: Number(product.price),

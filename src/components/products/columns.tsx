@@ -224,7 +224,7 @@ export const columns: ColumnDef<Product>[] = [
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
-                            <Link href={`/products/${payment.id}/edit`}>Chỉnh sửa</Link>
+                            <Link href={`/products/${payment.parentId || payment.id}/edit`}>Chỉnh sửa</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem>Đăng lên sàn</DropdownMenuItem>
                         <DropdownMenuItem className="text-red-600">Xóa</DropdownMenuItem>
