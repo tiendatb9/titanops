@@ -191,6 +191,23 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
                                         )}
                                     />
 
+                                    {/* Category Picker */}
+                                    <div className="space-y-2">
+                                        <Label>Danh mục Shopee</Label>
+                                        {categories.length > 0 ? (
+                                            <CategoryCascader
+                                                categories={categories}
+                                                value={product?.categoryId ? Number(product.categoryId) : undefined}
+                                                // Note: Ideally bind to local state or form field if editing category
+                                                onSelect={handleCategorySelect}
+                                            />
+                                        ) : (
+                                            <div className="text-sm text-muted-foreground border rounded p-2 bg-muted/20">
+                                                {product?.shopId ? "Đang tải danh mục..." : "Vui lòng chọn Shop trước (Chưa hỗ trợ chọn shop ở đây)"}
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <div className="grid grid-cols-2 gap-4">
                                         <FormField
                                             control={form.control}
