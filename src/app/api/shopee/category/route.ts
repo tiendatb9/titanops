@@ -1,7 +1,9 @@
+```typescript
 import { NextRequest, NextResponse } from "next/server"
 import { ShopeeClient } from "@/lib/shopee"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { ShopeeAuthService } from "@/lib/services/shopee-auth"
 
 const partnerId = Number(process.env.SHOPEE_PARTNER_ID)
 const partnerKey = process.env.SHOPEE_PARTNER_KEY!
@@ -20,20 +22,18 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        // Get Access Token
+        // Get valid access token using the service (handles refresh automatically)
+        const accessToken = await ShopeeAuthService.getValidAccessToken(shopId)
+
         const shop = await prisma.shop.findUnique({
-            where: { id: shopId },
-            include: { shopeeTokens: true }
+             where: { id: shopId },
+             select: { platformShopId: true }
         })
 
-        if (!shop || !shop.shopeeTokens || shop.shopeeTokens.length === 0) {
-            return NextResponse.json({ error: "Shop or Token not found" }, { status: 404 })
-        }
-
-        const token = shop.shopeeTokens[0] // Use the first token
+        if (!shop) throw new Error("Shop not found")
 
         const client = new ShopeeClient(partnerId, partnerKey)
-        const categories = await client.getCategoryList(Number(shop.platformShopId), token.accessToken)
+        const categories = await client.getCategoryList(Number(shop.platformShopId), accessToken)
 
         return NextResponse.json(categories)
 
