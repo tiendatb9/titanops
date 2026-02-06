@@ -31,44 +31,71 @@ async function getOnlineProducts(userId: string) {
     // 2. Get Products (Flat)
     const products = await prisma.product.findMany({
         where: { userId },
-        // No Include Variants needed
         orderBy: { updatedAt: 'desc' }
     })
 
-    // Transform for UI (matches columns schema)
-    const formattedProducts = products.map(p => {
-        return {
-            id: p.id,
-            name: p.name,
-            variantName: p.variantName || undefined, // New Field
-            sku: p.sku || "",
+    // Grouping Logic
+    const grouped = new Map<string, typeof products>()
+    products.forEach(p => {
+        const key = p.sourceId || `local_${p.id}`
+        if (!grouped.has(key)) grouped.set(key, [])
+        grouped.get(key)!.push(p)
+    })
 
-            price: Number(p.price),
-            stock: p.stock,
+    const formattedProducts: any[] = []
 
-            status: (p.status === 'ACTIVE' ? 'active' : 'draft') as "active" | "draft" | "archived",
-            image: p.images[0] || "/placeholder.png",
-            platforms: { shopee: true, tiktok: false, lazada: false }, // Placeholder logic
+    grouped.forEach((variants, key) => {
+        const first = variants[0]
 
-            rawJson: p.rawJson,
-            sourceId: p.sourceId || undefined,
-            sourceUrl: p.sourceUrl || undefined,
+        // 1. Push PARENT Row
+        formattedProducts.push({
+            id: `parent_${first.id}`, // Unique ID for parent
+            type: 'parent',
+            name: first.name,
+            variantName: undefined,
+            sku: `${variants.length} phân loại`, // Summary
 
-            // Rich Data Mapping
-            originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
-            promoPrice: p.promoPrice ? Number(p.promoPrice) : undefined,
-            promoId: p.promoId || undefined,
-            daysToShip: p.daysToShip || undefined,
-            platformStatus: p.platformStatus || undefined,
+            price: 0, // Parent doesn't show price
+            stock: 0, // Parent doesn't show stock
 
-            // Legacy Variant Array (Keep empty or minimal for Columns compatibility?)
-            // Columns expect 'variants' array.
-            // If I return empty, columns will show "Simple Product" view?
-            // But I want to show the Variant Name if present!
-            // I should use "variants" to fake self? 
-            // OR Update Columns to just show top level info.
+            status: (first.status === 'ACTIVE' ? 'active' : 'draft') as "active" | "draft" | "archived",
+            image: first.images[0] || "/placeholder.png",
+            platforms: { shopee: true, tiktok: false, lazada: false },
+
+            rawJson: first.rawJson,
+            sourceId: first.sourceId,
+            sourceUrl: first.sourceUrl,
             variants: []
-        }
+        })
+
+        // 2. Push VARIANT Rows
+        variants.forEach(p => {
+            formattedProducts.push({
+                id: p.id,
+                type: 'variant',
+                name: p.name, // Will function as Parent Name in columns if not careful, need to distinct
+                variantName: p.variantName || "Mặc định",
+                sku: p.sku || "",
+
+                price: Number(p.price),
+                stock: p.stock,
+
+                status: (p.status === 'ACTIVE' ? 'active' : 'draft') as "active" | "draft" | "archived",
+                image: p.images[0] || "/placeholder.png", // Variant Image
+                platforms: { shopee: true, tiktok: false, lazada: false },
+
+                rawJson: p.rawJson,
+                sourceId: p.sourceId,
+                sourceUrl: p.sourceUrl,
+
+                originalPrice: p.originalPrice ? Number(p.originalPrice) : undefined,
+                promoPrice: p.promoPrice ? Number(p.promoPrice) : undefined,
+                promoId: p.promoId || undefined,
+                daysToShip: p.daysToShip || undefined,
+                platformStatus: p.platformStatus || undefined,
+                variants: []
+            })
+        })
     })
 
     return {

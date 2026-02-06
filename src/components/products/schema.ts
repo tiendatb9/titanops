@@ -1,5 +1,6 @@
 export type Product = {
     id: string
+    type?: 'parent' | 'variant' // New field
     name: string
     variantName?: string
     sku: string
