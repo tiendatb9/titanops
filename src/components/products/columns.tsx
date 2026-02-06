@@ -88,10 +88,13 @@ export const columns: ColumnDef<Product>[] = [
         },
     },
     {
-        accessorKey: "sku", // Use SKU or create a new logical column
-        header: "Phân loại / SKU",
+        accessorKey: "classification",
+        header: "Phân loại",
         cell: ({ row }) => {
             const product = row.original
+            // If no variant name (Single Product), render empty
+            if (!product.variantName) return null
+
             return (
                 <div className="flex items-center gap-3">
                     <div className="h-8 w-8 rounded border bg-muted/50 overflow-hidden shrink-0">
@@ -105,15 +108,19 @@ export const columns: ColumnDef<Product>[] = [
                         <div className="text-xs font-medium text-purple-700">
                             {product.variantName}
                         </div>
-                        <div className="flex flex-col gap-0.5 mt-0.5">
-                            <span className="text-[10px] text-muted-foreground">SKU: {product.sku}</span>
-                            <div className="flex gap-1">
-                                <span className="text-[10px] text-gray-500 bg-gray-50 px-1 rounded border border-gray-100" title="Variant ID">ID: {product.variantId}</span>
-                            </div>
+                        <div className="flex gap-1 mt-0.5">
+                            <span className="text-[10px] text-gray-500 bg-gray-50 px-1 rounded border border-gray-100" title="Variant ID">ID: {product.variantId}</span>
                         </div>
                     </div>
                 </div>
             )
+        }
+    },
+    {
+        accessorKey: "sku",
+        header: "SKU",
+        cell: ({ row }) => {
+            return <div className="font-mono text-sm">{row.original.sku}</div>
         }
     },
     {
