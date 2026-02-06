@@ -118,15 +118,17 @@ export async function POST(
                 const models = modelMap[item.item_id]
                 for (const model of models) {
                     const modelSku = model.model_sku || `${item.item_sku || 'SHOPEE'}-${model.model_id}`
-                    const price = model.price_info?.[0]?.original_price || 0
+
+                    // Price Logic
+                    // Shopee V2 API: price_info[0] usually contains current status
+                    const priceInfo = model.price_info?.[0]
+                    const originalPrice = priceInfo?.original_price || 0
+                    const currentPrice = priceInfo?.current_price || originalPrice
+                    const promotionId = model.promotion_id || null // Check API response structure if needed
+
                     const stock = model.stock_info_v2?.summary_info?.total_available_stock || model.stock_info_v2?.seller_stock?.[0]?.stock || 0
 
-                    // Upsert Logic: Find existing Product by (userId + sourceId + sourceSkuId)
-                    // Wait, Schema has no unique on (sourceId, sourceSkuId). 
-                    // Best effort: Find by SKU if present, or create new.
-                    // Actually, we should link Listing first using platformItemId + platformSkuId
-
-                    // Find Listing
+                    // Upsert Logic
                     const existingListing = await prisma.listing.findFirst({
                         where: {
                             shopId: shop.id,
@@ -136,16 +138,23 @@ export async function POST(
                         include: { product: true }
                     })
 
+                    const richData = {
+                        originalPrice: originalPrice,
+                        promoPrice: currentPrice,
+                        promoId: promotionId ? String(promotionId) : null,
+                    }
+
                     if (existingListing && existingListing.product) {
                         // Update
                         await prisma.product.update({
                             where: { id: existingListing.product.id },
                             data: {
                                 ...baseProductData,
-                                name: `${item.item_name} - ${model.model_name}`, // Flatten Name
+                                name: `${item.item_name} - ${model.model_name}`,
                                 variantName: model.model_name,
                                 sku: modelSku,
-                                price: price,
+                                price: currentPrice, // Use Current (Promo) Price as Main Price
+                                ...richData,
                                 stock: stock,
                                 rawJson: { item, model } as any
                             }
@@ -156,7 +165,7 @@ export async function POST(
                                 syncStatus: 'SYNCED',
                                 lastSyncAt: new Date(),
                                 syncedStock: stock,
-                                syncedPrice: price
+                                syncedPrice: currentPrice
                             }
                         })
                     } else {
@@ -167,7 +176,8 @@ export async function POST(
                                 name: `${item.item_name} - ${model.model_name}`,
                                 variantName: model.model_name,
                                 sku: modelSku,
-                                price: price,
+                                price: currentPrice,
+                                ...richData,
                                 stock: stock,
                                 sourceSkuId: String(model.model_id),
                                 rawJson: { item, model } as any
@@ -178,12 +188,12 @@ export async function POST(
                                 shopId: shop.id,
                                 productId: product.id,
                                 platformItemId: String(item.item_id),
-                                platformSkuId: String(model.model_id), // Variant ID
+                                platformSkuId: String(model.model_id),
                                 platformSku: modelSku,
                                 status: "ACTIVE",
                                 syncStatus: "LINKED",
                                 lastSyncAt: new Date(),
-                                syncedPrice: price,
+                                syncedPrice: currentPrice,
                                 syncedStock: stock
                             }
                         })
@@ -195,8 +205,19 @@ export async function POST(
                 // Case B: No Variants (Single Item)
                 const platformItemId = String(item.item_id)
                 const sku = item.item_sku || `SHOPEE-${item.item_id}`
-                const price = item.price_info?.[0]?.original_price || 0
+
+                const priceInfo = item.price_info?.[0]
+                const originalPrice = priceInfo?.original_price || 0
+                const currentPrice = priceInfo?.current_price || originalPrice
+                const promotionId = item.promotion_id || null
+
                 const stock = item.stock_info_v2?.summary_info?.total_available_stock || item.stock_info_v2?.seller_stock?.[0]?.stock || 0
+
+                const richData = {
+                    originalPrice: originalPrice,
+                    promoPrice: currentPrice,
+                    promoId: promotionId ? String(promotionId) : null,
+                }
 
                 // Find Listing
                 const existingListing = await prisma.listing.findFirst({

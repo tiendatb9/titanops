@@ -137,14 +137,27 @@ export const columns: ColumnDef<Product>[] = [
             )
         },
         cell: ({ row }) => {
-            const price = parseFloat(row.getValue("price"))
-            const formatted = new Intl.NumberFormat("vi-VN", {
+            const product = row.original
+            const price = parseFloat(row.getValue("price")) // This is 'currentPrice' from DB
+            const originalPrice = product.originalPrice ? Number(product.originalPrice) : 0
+            const hasPromo = product.promoId || (originalPrice > price)
+
+            const format = (v: number) => new Intl.NumberFormat("vi-VN", {
                 style: "currency",
                 currency: "VND",
-            }).format(price)
+            }).format(v)
 
             return (
-                <div className="text-red-500 font-medium">{formatted}</div>
+                <div className="flex flex-col items-end">
+                    {hasPromo && originalPrice > price && (
+                        <div className="text-xs text-muted-foreground line-through">
+                            {format(originalPrice)}
+                        </div>
+                    )}
+                    <div className="text-red-500 font-medium font-mono">
+                        {format(price)}
+                    </div>
+                </div>
             )
         },
     },
