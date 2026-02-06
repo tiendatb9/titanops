@@ -23,15 +23,17 @@ export async function GET(request: NextRequest) {
         // Get Access Token
         const shop = await prisma.shop.findUnique({
             where: { id: shopId },
-            include: { shopeeToken: true }
+            include: { shopeeTokens: true }
         })
 
-        if (!shop || !shop.shopeeToken) {
+        if (!shop || !shop.shopeeTokens || shop.shopeeTokens.length === 0) {
             return NextResponse.json({ error: "Shop or Token not found" }, { status: 404 })
         }
 
+        const token = shop.shopeeTokens[0] // Use the first token
+
         const client = new ShopeeClient(partnerId, partnerKey)
-        const categories = await client.getCategoryList(Number(shop.platformShopId), shop.shopeeToken.accessToken)
+        const categories = await client.getCategoryList(Number(shop.platformShopId), token.accessToken)
 
         return NextResponse.json(categories)
 
