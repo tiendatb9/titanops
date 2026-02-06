@@ -236,8 +236,10 @@ export async function POST(
                         data: {
                             ...baseProductData,
                             sku: sku,
-                            price: price,
+                            price: currentPrice,
+                            ...richData,
                             stock: stock,
+                            variantName: null,
                             rawJson: item as any
                         }
                     })
@@ -247,7 +249,7 @@ export async function POST(
                             syncStatus: 'SYNCED',
                             lastSyncAt: new Date(),
                             syncedStock: stock,
-                            syncedPrice: price
+                            syncedPrice: currentPrice
                         }
                     })
                 } else {
@@ -255,9 +257,11 @@ export async function POST(
                         data: {
                             ...baseProductData,
                             sku: sku,
-                            price: price,
+                            price: currentPrice,
+                            ...richData,
                             stock: stock,
-                            sourceSkuId: null, // No variant ID
+                            sourceSkuId: null, // No unique Variant ID for single item
+                            variantName: null,
                             rawJson: item as any
                         }
                     })
@@ -267,10 +271,11 @@ export async function POST(
                             productId: product.id,
                             platformItemId: platformItemId,
                             platformSkuId: null,
+                            platformSku: sku,
                             status: "ACTIVE",
                             syncStatus: "LINKED",
                             lastSyncAt: new Date(),
-                            syncedPrice: price,
+                            syncedPrice: currentPrice,
                             syncedStock: stock
                         }
                     })
