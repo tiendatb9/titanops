@@ -191,20 +191,17 @@ export function ProductSheet({ product, open, onOpenChange }: ProductSheetProps)
                                         )}
                                     />
 
-                                    {/* Category Picker */}
                                     <div className="space-y-2">
                                         <Label>Danh mục Shopee</Label>
-                                        {categories.length > 0 ? (
-                                            <CategoryCascader
-                                                categories={categories}
-                                                value={product?.categoryId ? Number(product.categoryId) : undefined}
-                                                // Note: Ideally bind to local state or form field if editing category
-                                                onSelect={handleCategorySelect}
-                                            />
-                                        ) : (
-                                            <div className="text-sm text-muted-foreground border rounded p-2 bg-muted/20">
-                                                {product?.shopId ? "Đang tải danh mục..." : "Vui lòng chọn Shop trước (Chưa hỗ trợ chọn shop ở đây)"}
-                                            </div>
+                                        <CategoryCascader
+                                            categories={categories}
+                                            value={product?.categoryId ? Number(product.categoryId) : undefined}
+                                            onSelect={handleCategorySelect}
+                                        />
+                                        {categories.length === 0 && (
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Đang tải danh mục...
+                                            </p>
                                         )}
                                     </div>
 
