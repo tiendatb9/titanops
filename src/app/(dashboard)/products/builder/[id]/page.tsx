@@ -23,13 +23,32 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
     if (!product) notFound()
 
-    // Fetch Variants (Children)
-    const dbVariants = await prisma.product.findMany({
-        where: {
-            parentId: id,
-            userId: session.user.id
-        }
-    })
+    // Fetch Variants (Siblings via Source ID)
+    // In Flat Architecture, we group by sourceId (Shopee Item ID)
+    let dbVariants: any[] = []
+    if (product.sourceId && product.shopId) {
+        dbVariants = await prisma.product.findMany({
+            where: {
+                sourceId: product.sourceId,
+                shopId: product.shopId,
+                userId: session.user.id,
+                NOT: {
+                    id: product.id // Exclude self? Or include? Builder logic expects self in variants? 
+                    // Usually Builder treats "variants" as the list of skus. 
+                    // If this is one of them, we should include ALL of them in the list.
+                }
+            }
+        })
+        // Add current product to the list if not present, or better: fetch ALL including self.
+        // Let's refetch cleaner.
+        dbVariants = await prisma.product.findMany({
+            where: {
+                sourceId: product.sourceId,
+                shopId: product.shopId,
+                userId: session.user.id
+            }
+        })
+    }
 
     const hasVariants = dbVariants.length > 0
 
