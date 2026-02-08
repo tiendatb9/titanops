@@ -23,21 +23,35 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
     if (!product) notFound()
 
-    // Fetch Variants (Children)
-    const variants = await prisma.product.findMany({
-        where: { parentId: id, status: { not: 'archived' } }
-    })
+    // Fetch Variants (Siblings by Source ID)
+    let variants: any[] = []
 
-    const hasVariants = variants.length > 0
-    const mappedVariants = variants.map(v => ({
+    if (product.sourceId) {
+        variants = await prisma.product.findMany({
+            where: {
+                sourceId: product.sourceId,
+                status: { not: 'archived' }
+            }
+        })
+    } else {
+        // If no sourceId, check if this product IS a variant or just single
+        // Since we don't have parentId, we can't easily find siblings without sourceId.
+        // So we default to just this product.
+        variants = [product]
+    }
+
+    const hasVariants = variants.length > 0 && !!product.sourceId
+
+    // Map to Builder Variant Schema (must include tierIndices)
+    const mappedVariants = variants.map((v: any) => ({
         id: v.id,
-        name: v.name, // or v.variantName
-        sku: v.sku,
+        name: v.variantName || v.name,
+        sku: v.sku || "",
         price: Number(v.price),
         stock: v.stock,
-        image: v.image,
-        // We might need to map options if we want to reconstruct tiers, but for now flat list
-        options: v.variantName ? [v.variantName] : []
+        image: v.images?.[0] || "",
+        options: v.variantName ? [v.variantName] : [],
+        tierIndices: [] // Required by schema
     }))
 
     // Extract Unique Channels (Shops) from Listings
