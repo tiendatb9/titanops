@@ -11,59 +11,55 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
     const { id } = await params
 
-    // Fetch Single Product (Flat) without variants relation
+    // Fetch Single Product (Flat) WITH variants relation
     const product = await prisma.product.findUnique({
         where: { id: id, userId: session.user.id },
         include: {
             listings: {
                 include: { shop: true }
-            }
+            },
+            variants: true // Fetch children
         }
     })
 
     if (!product) notFound()
 
-    // Fetch Variants (Siblings via Source ID)
-    // In Flat Architecture, we group by sourceId (Shopee Item ID)
-    let dbVariants: any[] = []
-    if (product.sourceId && product.shopId) {
-        dbVariants = await prisma.product.findMany({
-            where: {
-                sourceId: product.sourceId,
-                shopId: product.shopId,
-                userId: session.user.id,
-                NOT: {
-                    id: product.id // Exclude self? Or include? Builder logic expects self in variants? 
-                    // Usually Builder treats "variants" as the list of skus. 
-                    // If this is one of them, we should include ALL of them in the list.
-                }
-            }
-        })
-        // Add current product to the list if not present, or better: fetch ALL including self.
-        // Let's refetch cleaner.
-        dbVariants = await prisma.product.findMany({
-            where: {
-                sourceId: product.sourceId,
-                shopId: product.shopId,
-                userId: session.user.id
-            }
-        })
-    }
-
+    // Handle Variants
+    const dbVariants = product.variants || []
     const hasVariants = dbVariants.length > 0
 
-    // Map DB Variants to Builder Variants
-    const mappedVariants = dbVariants.map(v => ({
+    // Map DB Variants to Form Variants
+    const formVariants = dbVariants.map(v => ({
         id: v.id,
         name: v.variantName || v.name,
         price: Number(v.price),
         stock: v.stock,
         sku: v.sku,
-        image: v.image,
-        options: [] // TODO: Extract options if stored? For Flat SKU from Shopee, options might not be explicit in DB columns
+        image: v.image
     }))
 
-    // ... (rest of initialData construction)
+    // Extract Unique Channels (Shops) from Listings
+    const channelMap = new Map<string, { shopId: string, shopName: string, platform: any, platformItemId: string }>()
+
+    // Check Master Listings
+    product.listings.forEach(l => {
+        if (!channelMap.has(l.shopId)) {
+            channelMap.set(l.shopId, {
+                shopId: l.shop.id,
+                shopName: l.shop.name,
+                platform: l.shop.platform,
+                platformItemId: l.platformItemId
+            })
+        }
+    })
+
+    const channels = Array.from(channelMap.values()).map(c => ({
+        shopId: c.shopId,
+        shopName: c.shopName,
+        platform: c.platform,
+        platformItemId: c.platformItemId,
+        isActive: true
+    }))
 
     const initialData: ProductBuilderValues & { id: string } = {
         id: product.id,
@@ -78,15 +74,13 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         // Spec placeholders
         weight: product.weight || 100,
         daysToShip: 2,
-        attributes: [],
+        attributes: [], // TODO: Load Attributes if saved
 
         hasVariants: hasVariants,
 
-        variationTiers: [], // Populating tiers from DB is complex if not stored as JSON. 
-        // For Shopee synced products, we might need to rely on 'variantName' text or fetch structure.
-        // For now, listing variants is better than nothing.
+        variationTiers: [], // TODO: Reconstruct tiers if needed
 
-        variants: mappedVariants.length > 0 ? mappedVariants : [],
+        variants: formVariants,
 
         // Single Product Mode values
         price: Number(product.price),
